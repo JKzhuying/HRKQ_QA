@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>口腔诊所财务管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#059669',
+                        'primary-dark': '#047857',
+                        sidebar: '#0f172a',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex">
+        <!-- 侧边栏 -->
+        <aside id="sidebar" class="hidden md:flex w-64 flex-col bg-sidebar text-white fixed h-full z-30">
+            <div class="p-5 border-b border-slate-700">
+                <div class="flex items-center gap-3">
+                    <svg class="w-7 h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <h1 id="clinic-name" class="text-base font-bold leading-tight">我的口腔诊所</h1>
+                        <p class="text-xs text-slate-400">财务管理系统</p>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex-1 p-3 space-y-1">
+                <a href="#" data-page="dashboard" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    <span class="font-medium">仪表盘</span>
+                </a>
+                <a href="#" data-page="import" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    <span class="font-medium">导入数据</span>
+                </a>
+                <!-- 手动录入 v7.2 新增 -->
+                <a href="#" data-page="entry" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    <span class="font-medium">手动录入</span>
+                </a>
+                <a href="#" data-page="query" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <span class="font-medium">记录查询</span>
+                </a>
+                <a href="#" data-page="statistics" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    <span class="font-medium">统计分析</span>
+                </a>
+                <!-- 凭证管理 v8.0 -->
+                <a href="#" data-page="vouchers" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span class="font-medium">凭证管理</span>
+                </a>
+                <!-- 财务数据维护 v8.0 -->
+                <a href="#" data-page="finance" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    <span class="font-medium">财务数据维护</span>
+                </a>
+                <a href="#" data-page="settings" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span class="font-medium">系统设置</span>
+                </a>
+            </nav>
+            <div class="p-4 border-t border-slate-700">
+                <p class="text-xs text-slate-500 text-center">牙科财务管理系统 v8.3.1</p>
+            </div>
+        </aside>
+
+        <!-- 移动端头部 -->
+        <div class="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar text-white">
+            <div class="flex items-center justify-between p-4">
+                <div class="flex items-center gap-2">
+                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span id="mobile-clinic-name" class="font-bold">我的口腔诊所</span>
+                </div>
+                <button id="mobile-menu-btn" class="p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+            </div>
+            <nav id="mobile-menu" class="hidden px-4 pb-4 space-y-1">
+                <a href="#" data-page="dashboard" class="mobile-nav-item flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    <span>仪表盘</span>
+                </a>
+                <a href="#" data-page="import" class="mobile-nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    <span>导入数据</span>
+                </a>
+                <a href="#" data-page="query" class="mobile-nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <span>记录查询</span>
+                </a>
+                <a href="#" data-page="statistics" class="mobile-nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    <span>统计分析</span>
+                </a>
+                <a href="#" data-page="settings" class="mobile-nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span>系统设置</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-8">
+            <!-- 仪表盘页面 -->
+            <div id="page-dashboard" class="page-content space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">仪表盘</h2>
+                    <p class="text-sm text-gray-500 mt-1">本月财务概览</p>
+                </div>
+                <div id="dashboard-cards" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- 动态填充 -->
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">最近手续费（最近50条收入记录）</h3>
+                        <span class="text-xs text-gray-400">公式：（应收 - 实收）/ 应收</span>
+                    </div>
+                    <div id="fee-chart" class="overflow-x-auto">
+                        <!-- 动态填充 -->
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">收入大类对比（本月）</h3>
+                    <div id="payment-chart" class="space-y-3">
+                        <!-- 动态填充 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 导入数据页面 -->
+            <div id="page-import" class="page-content space-y-6 hidden">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">导入数据</h2>
+                        <p class="text-sm text-gray-500 mt-1">从Excel文件导入收支记录或手动录入</p>
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <button id="clear-all-btn" onclick="clearAllRecords()" class="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        清空所有记录
+                    </button>
+                </div>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div class="text-sm text-blue-800 space-y-1">
+                            <p class="font-medium">导入规则（v8.3）：</p>
+                            <ul class="list-disc list-inside space-y-0.5 text-blue-700 text-xs md:text-sm">
+                                <li>支持 .xlsx 和 .xls 格式，第1行作为表头，从第2行开始读取</li>
+                                <li>第二列支持三种类型：<strong>"收"</strong>=收入、<strong>"支"</strong>=支出、<strong>"调"</strong>=资金调拨，其他一律忽略</li>
+                                <li>收/支行：日期|收/支|对象|收费大类|具体项目|应收金额|实收金额|备注</li>
+                                <li>调拨行：日期|调|调出账户|资金调拨|转入账户|计划金额|实际金额|备注</li>
+                                <li>收费大类必须与系统中已配置的收费大类匹配，不匹配的行标红需修改后才允许导入</li>
+                                <li>调拨行的调出/转入账户必须与系统中银行账号匹配，不匹配标红需修改</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center gap-4 mb-4 flex-wrap">
+                        <input type="file" id="excel-file" accept=".xlsx,.xls" class="hidden">
+                        <label for="excel-file" class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark cursor-pointer transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                            选择Excel文件
+                        </label>
+                        <div id="file-info" class="hidden flex items-center gap-3">
+                            <span id="file-name" class="text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg"></span>
+                            <button id="import-btn" class="px-5 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors">开始导入</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="import-result" class="hidden bg-white rounded-xl shadow-sm border p-6">
+                    <!-- 动态填充 -->
+                </div>
+                <div id="preview-section" class="hidden bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <div class="px-6 py-4 border-b flex items-center justify-between flex-wrap gap-3">
+                        <h3 class="font-semibold text-gray-900">数据预览</h3>
+                        <div class="flex items-center gap-3">
+                            <span id="preview-count" class="text-sm text-gray-500"></span>
+                            <select id="preview-page-size" onchange="renderPreviewPage()" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="20">显示前20条</option>
+                                <option value="50" selected>显示前50条</option>
+                                <option value="70">显示前70条</option>
+                                <option value="0">显示全部</option>
+                            </select>
+                            <button onclick="clearCurrentPreview()" class="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm border border-gray-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                清除当前导入的数据
+                            </button>
+                        </div>
+                    </div>
+                    <!-- 检查结果区域 -->
+                    <div id="preview-check-report" class="hidden"></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">日期</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">类型</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">对象</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">收费大类</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">具体项目</th>
+                                    <th class="px-4 py-3 text-right font-medium text-gray-600">应收</th>
+                                    <th class="px-4 py-3 text-right font-medium text-gray-600">实收</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">备注</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview-body" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                    <!-- 分页控件 -->
+                    <div id="preview-pagination" class="hidden px-6 py-3 border-t flex items-center justify-between">
+                        <span id="preview-page-info" class="text-sm text-gray-500"></span>
+                        <div class="flex items-center gap-1" id="preview-page-buttons"></div>
+                    </div>
+                </div>
+
+                <!-- 导入loading弹窗 -->
+                <div id="import-loading-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
+                        <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">正在接入大数据模型</h3>
+                        <p class="text-gray-500">思考中……</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== 手动录入页面 v8.3 ==================== -->
+            <div id="page-entry" class="page-content space-y-6 hidden">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">手动录入</h2>
+                    <p class="text-sm text-gray-500 mt-1">直接在表格中录入收入、支出和调拨数据，完成后统一保存</p>
+                </div>
+
+                <!-- Tab 切换 -->
+                <div class="flex items-center gap-2 border-b">
+                    <button id="entry-tab-income" onclick="switchEntryTab('income')" class="px-5 py-3 text-sm font-medium border-b-2 border-emerald-500 text-emerald-600 bg-emerald-50/50 rounded-t-lg transition-colors">
+                        收入录入
+                    </button>
+                    <button id="entry-tab-expense" onclick="switchEntryTab('expense')" class="px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors">
+                        支出录入
+                    </button>
+                    <button id="entry-tab-transfer" onclick="switchEntryTab('transfer')" class="px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors">
+                        调拨录入
+                    </button>
+                </div>
+
+                <!-- 收入录入区域 -->
+                <div id="entry-panel-income" class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <div class="px-6 py-4 border-b bg-emerald-50 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            </div>
+                            <h3 class="font-semibold text-gray-900">收入录入</h3>
+                            <span id="income-row-count" class="text-xs text-gray-400">0 行</span>
+                        </div>
+                        <button onclick="addEntryRow('income')" class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            添加行
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[130px]">日期</th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[100px]">对象</th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[130px]">收费大类</th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[120px]">具体项目</th>
+                                    <th class="px-3 py-2 text-right font-medium text-gray-600 w-[90px]">应收</th>
+                                    <th class="px-3 py-2 text-right font-medium text-gray-600 w-[90px]">实收 <span class="text-red-400">*</span></th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[100px]">备注</th>
+                                    <th class="px-3 py-2 text-center font-medium text-gray-600 w-[60px]">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="entry-income-body" class="divide-y">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 支出录入区域 -->
+                <div id="entry-panel-expense" class="bg-white rounded-xl shadow-sm border overflow-hidden hidden">
+                    <div class="px-6 py-4 border-b bg-red-50 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                            </div>
+                            <h3 class="font-semibold text-gray-900">支出录入</h3>
+                            <span id="expense-row-count" class="text-xs text-gray-400">0 行</span>
+                        </div>
+                        <button onclick="addEntryRow('expense')" class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            添加行
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[130px]">日期</th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[100px]">对象</th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[130px]">收费大类</th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[120px]">具体项目</th>
+                                    <th class="px-3 py-2 text-right font-medium text-gray-600 w-[90px]">应收</th>
+                                    <th class="px-3 py-2 text-right font-medium text-gray-600 w-[90px]">实收 <span class="text-red-400">*</span></th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[100px]">备注</th>
+                                    <th class="px-3 py-2 text-center font-medium text-gray-600 w-[60px]">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="entry-expense-body" class="divide-y">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 调拨录入区域 v8.3 -->
+                <div id="entry-panel-transfer" class="bg-white rounded-xl shadow-sm border overflow-hidden hidden">
+                    <div class="px-6 py-4 border-b bg-blue-50 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                            </div>
+                            <h3 class="font-semibold text-gray-900">调拨录入</h3>
+                            <span id="transfer-row-count" class="text-xs text-gray-400">0 行</span>
+                        </div>
+                        <button onclick="addEntryRow('transfer')" class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            添加行
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[130px]">日期</th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[130px]">转出账户 <span class="text-red-400">*</span></th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[130px]">转入账户 <span class="text-red-400">*</span></th>
+                                    <th class="px-3 py-2 text-right font-medium text-gray-600 w-[100px]">计划金额 <span class="text-red-400">*</span></th>
+                                    <th class="px-3 py-2 text-right font-medium text-gray-600 w-[100px]">实际到账 <span class="text-red-400">*</span></th>
+                                    <th class="px-3 py-2 text-left font-medium text-gray-600 w-[100px]">备注</th>
+                                    <th class="px-3 py-2 text-center font-medium text-gray-600 w-[60px]">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="entry-transfer-body" class="divide-y">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 底部操作按钮 -->
+                <div class="flex items-center justify-center gap-4 pt-4 pb-8">
+                    <button onclick="clearAllEntryRows()" class="px-6 py-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors text-sm font-medium">
+                        清空所有
+                    </button>
+                    <button onclick="saveAllEntries()" class="group relative flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all text-sm font-medium overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
+                        <svg class="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        <span class="relative z-10">保存所有</span>
+                    </button>
+                </div>
+            </div>
+            <!-- ==================== 手动录入页面结束 ==================== -->
+
+            <!-- 记录查询页面 -->
+            <div id="page-query" class="page-content space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">记录查询</h2>
+                        <p class="text-sm text-gray-500 mt-1">查询和管理所有收支记录</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border p-5">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                        <span class="font-medium text-gray-700">筛选条件</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3">
+                        <div><label class="block text-xs text-gray-500 mb-1">开始日期</label><input type="date" id="q-start-date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"></div>
+                        <div><label class="block text-xs text-gray-500 mb-1">结束日期</label><input type="date" id="q-end-date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"></div>
+                        <div><label class="block text-xs text-gray-500 mb-1">类型</label><select id="q-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"><option value="">全部</option><option value="income">收入</option><option value="expense">支出</option><option value="transfer">调拨</option></select></div>
+                        <div><label class="block text-xs text-gray-500 mb-1">收费大类</label><select id="q-category" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"><option value="">全部</option><option value="治疗">治疗</option><option value="治疗加固定修复">治疗加固定修复</option><option value="固定修复">固定修复</option><option value="种植">种植</option><option value="活动牙">活动牙</option><option value="财务费用">财务费用</option><option value="美学">美学</option><option value="治疗加美学">治疗加美学</option></select></div>
+                        <div><label class="block text-xs text-gray-500 mb-1">项目</label><select id="q-item" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"><option value="">全部</option></select></div>
+                        <div><label class="block text-xs text-gray-500 mb-1">支付方式</label><select id="q-payment" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"><option value="">全部</option><option value="alipay">支付宝</option><option value="wechat">微信支付</option><option value="cash">现金</option></select></div>
+                        <div><label class="block text-xs text-gray-500 mb-1">关键词</label><input type="text" id="q-keyword" placeholder="对象/项目/备注" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"></div>
+                    </div>
+                    <div class="flex items-center gap-3 mt-4 flex-wrap">
+                        <button id="q-search-btn" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            查询
+                        </button>
+                        <button id="q-reset-btn" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">重置</button>
+                        <div class="flex items-center gap-2 ml-auto">
+                            <span id="q-total" class="text-sm text-gray-500"></span>
+                            <select id="q-page-size" onchange="changeQueryPageSize()" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="20">每页20条</option>
+                                <option value="50">每页50条</option>
+                                <option value="70">每页70条</option>
+                                <option value="0">显示全部</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- 批量操作栏 -->
+                <div id="batch-toolbar" class="hidden bg-white rounded-xl shadow-sm border p-3 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="select-all" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary" onchange="toggleSelectAll()">
+                        <label for="select-all" class="text-sm text-gray-600 cursor-pointer">全选本页</label>
+                        <span id="selected-count" class="text-sm text-gray-500">已选 0 条</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="batchGenerateVouchers()" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            生成凭证
+                        </button>
+                        <button onclick="batchDelete()" class="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            批量删除
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50"><tr><th class="px-3 py-3 text-center w-10"><input type="checkbox" id="header-select-all" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary" onchange="toggleSelectAll()"></th><th class="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer select-none hover:text-primary group" onclick="toggleSort('date')">日期<span id="sort-icon-date" class="inline-block ml-1 text-gray-300 group-hover:text-primary transition-colors">&#9650;</span></th><th class="px-4 py-3 text-left font-medium text-gray-600">类型</th><th class="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer select-none hover:text-primary group" onclick="toggleSort('counterparty')">对象<span id="sort-icon-counterparty" class="inline-block ml-1 text-gray-300 group-hover:text-primary transition-colors">&#9650;</span></th><th class="px-4 py-3 text-left font-medium text-gray-600">收费大类</th><th class="px-4 py-3 text-left font-medium text-gray-600">具体项目</th><th class="px-4 py-3 text-right font-medium text-gray-600">应收</th><th class="px-4 py-3 text-right font-medium text-gray-600">实收</th><th class="px-4 py-3 text-left font-medium text-gray-600">支付方式</th><th class="px-4 py-3 text-left font-medium text-gray-600">备注</th></tr></thead>
+                            <tbody id="query-body" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                    <div id="query-pagination" class="hidden flex items-center justify-between px-4 py-3 border-t">
+                        <div class="text-sm text-gray-500" id="query-page-info"></div>
+                        <div class="flex items-center gap-2" id="query-page-buttons"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计分析页面 -->
+            <div id="page-statistics" class="page-content space-y-6 hidden">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">统计分析</h2>
+                        <p class="text-sm text-gray-500 mt-1">收支数据统计与可视化</p>
+                    </div>
+                    <div class="flex items-center gap-3 bg-white rounded-xl border p-3">
+                        <label class="text-sm text-gray-500">统计时间:</label>
+                        <input type="date" id="stat-start-date" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                        <span class="text-gray-400">至</span>
+                        <input type="date" id="stat-end-date" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                        <button onclick="loadStatistics()" class="px-4 py-1.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm">
+                            统计
+                        </button>
+                    </div>
+                </div>
+                <div id="stat-summary" class="grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
+
+                <!-- 收费大类收入统计 -->
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">收费大类收入分布（实收）</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div id="income-pie-chart" class="flex items-center justify-center"></div>
+                        <div id="income-category-table" class="overflow-x-auto"></div>
+                    </div>
+                </div>
+
+                <!-- 收费大类支出统计 -->
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">支出统计</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div id="expense-pie-chart" class="flex items-center justify-center"></div>
+                        <div id="expense-category-table" class="overflow-x-auto"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">月度收支趋势</h3>
+                        <select id="stat-year" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"></select>
+                    </div>
+                    <div id="stat-monthly-chart" class="space-y-2"></div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">每日收支趋势</h3>
+                        <input type="month" id="stat-month" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    <div class="overflow-x-auto"><div id="stat-daily-chart" class="min-w-[600px] space-y-1"></div></div>
+                </div>
+            </div>
+
+            <!-- ==================== 凭证管理页面 v8.0 ==================== -->
+            <div id="page-vouchers" class="page-content space-y-6 hidden">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">凭证管理</h2>
+                    <p class="text-sm text-gray-500 mt-1">查看和审核自动生成的会计凭证</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <div class="p-4 border-b flex items-center justify-between flex-wrap gap-3">
+                        <div class="flex items-center gap-2">
+                            <button onclick="loadVouchers('')" class="px-3 py-1.5 text-sm rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors voucher-filter active" data-filter="">全部</button>
+                            <button onclick="loadVouchers('draft')" class="px-3 py-1.5 text-sm rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors voucher-filter" data-filter="draft">草稿</button>
+                            <button onclick="loadVouchers('confirmed')" class="px-3 py-1.5 text-sm rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors voucher-filter" data-filter="confirmed">已审核</button>
+                        </div>
+                        <button onclick="clearDraftVouchers()" class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200" title="清理草稿凭证和孤立凭证">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            清理无效凭证
+                        </button>
+                        <button onclick="clearAllVouchers()" class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors" title="危险：清空所有凭证！">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            强制清空全部凭证
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50"><tr><th class="px-4 py-3 text-left font-medium text-gray-600">凭证号</th><th class="px-4 py-3 text-left font-medium text-gray-600">日期</th><th class="px-4 py-3 text-left font-medium text-gray-600">来源</th><th class="px-4 py-3 text-left font-medium text-gray-600">关联流水</th><th class="px-4 py-3 text-right font-medium text-gray-600">金额</th><th class="px-4 py-3 text-center font-medium text-gray-600">状态</th><th class="px-4 py-3 text-center font-medium text-gray-600">操作</th></tr></thead>
+                            <tbody id="voucher-list-body" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                    <div id="voucher-pagination" class="px-4 py-3 border-t flex items-center justify-between"></div>
+                </div>
+            </div>
+            <!-- ==================== 凭证管理页面结束 ==================== -->
+
+            <!-- ==================== 财务数据维护页面 v8.0 ==================== -->
+            <div id="page-finance" class="page-content space-y-6 hidden">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">财务数据维护</h2>
+                    <p class="text-sm text-gray-500 mt-1">管理会计科目和收费大类映射</p>
+                </div>
+                <!-- Tab导航 -->
+                <div class="flex items-center gap-2 border-b">
+                    <button onclick="switchFinanceTab('l1')" id="tab-l1" class="finance-tab px-4 py-2.5 text-sm font-medium border-b-2 border-primary text-primary">一级科目</button>
+                    <button onclick="switchFinanceTab('l2')" id="tab-l2" class="finance-tab px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">二级科目</button>
+                    <button onclick="switchFinanceTab('mapping')" id="tab-mapping" class="finance-tab px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">科目映射</button>
+                </div>
+                <!-- Tab1: 一级科目 -->
+                <div id="finance-l1" class="finance-panel">
+                    <div class="bg-white rounded-xl shadow-sm border p-6">
+                        <p class="text-sm text-gray-500 mb-4">一级科目为会计准则预设，不可修改</p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50"><tr><th class="px-4 py-3 text-left font-medium text-gray-600">科目编码</th><th class="px-4 py-3 text-left font-medium text-gray-600">科目名称</th><th class="px-4 py-3 text-left font-medium text-gray-600">类别</th><th class="px-4 py-3 text-left font-medium text-gray-600">余额方向</th></tr></thead>
+                                <tbody id="finance-l1-body" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- Tab2: 二级科目 -->
+                <div id="finance-l2" class="finance-panel hidden">
+                    <div class="bg-white rounded-xl shadow-sm border p-6">
+                        <div class="flex items-center gap-3 mb-6 p-4 bg-gray-50 rounded-lg flex-wrap">
+                            <select id="new-l2-parent" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="">选择上级科目</option>
+                            </select>
+                            <input type="text" id="new-l2-name" placeholder="输入二级科目名称" class="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" onkeydown="if(event.key==='Enter') addL2Subject()">
+                            <button onclick="addL2Subject()" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                添加
+                            </button>
+                        </div>
+                        <div id="finance-l2-body" class="divide-y"></div>
+                    </div>
+                </div>
+                <!-- Tab3: 科目映射 -->
+                <div id="finance-mapping" class="finance-panel hidden">
+                    <div class="bg-white rounded-xl shadow-sm border p-6">
+                        <div class="flex items-center gap-3 mb-6 p-4 bg-gray-50 rounded-lg flex-wrap">
+                            <select id="new-map-cat" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-w-[180px]">
+                                <option value="">选择收费大类</option>
+                            </select>
+                            <span class="text-gray-400">→</span>
+                            <select id="new-map-sub" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-w-[220px]">
+                                <option value="">选择会计科目</option>
+                            </select>
+                            <button onclick="addMapping()" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                建立映射
+                            </button>
+                        </div>
+                        <div id="finance-mapping-list" class="divide-y"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ==================== 财务数据维护页面结束 ==================== -->
+
+            <!-- 自动备份设置弹窗 v8.1 -->
+            <div id="auto-backup-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div class="bg-white rounded-2xl shadow-xl p-0 max-w-lg w-full mx-4 overflow-hidden">
+                    <div class="px-6 py-4 border-b flex items-center justify-between bg-gray-50 rounded-t-2xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">设置自动备份</h3>
+                                <p class="text-xs text-gray-500">配置定时全量备份方案</p>
+                            </div>
+                        </div>
+                        <button onclick="closeAutoBackupModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="p-6 space-y-5">
+                        <!-- 开关 -->
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">启用自动备份</p>
+                                <p class="text-xs text-gray-400">开启后按设定间隔自动执行全量备份</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="ab-enabled" class="sr-only peer" onchange="toggleAutoBackupEnabled()">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+
+                        <!-- 间隔选择 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">备份间隔</label>
+                            <div class="grid grid-cols-3 gap-2 mb-2">
+                                <button onclick="setBackupInterval(24)" class="ab-interval-btn px-3 py-2 text-sm rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors text-center" data-hours="24">24小时</button>
+                                <button onclick="setBackupInterval(72)" class="ab-interval-btn px-3 py-2 text-sm rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors text-center" data-hours="72">72小时</button>
+                                <button onclick="setBackupInterval(168)" class="ab-interval-btn px-3 py-2 text-sm rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors text-center" data-hours="168">一周</button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-gray-500">自定义：</span>
+                                <input type="number" id="ab-interval-custom" min="1" max="8760" placeholder="输入小时数" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" onchange="setBackupInterval(this.value)">
+                                <span class="text-sm text-gray-400">小时</span>
+                            </div>
+                        </div>
+
+                        <!-- 保存路径 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">备份文件保存路径</label>
+                            <input type="text" id="ab-save-path" placeholder="如：/www/wwwroot/dental-finance/backups" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            <p class="text-xs text-gray-400 mt-1">请确保服务器进程对该路径有写入权限</p>
+                        </div>
+
+                        <!-- 当前配置摘要 -->
+                        <div id="ab-summary" class="hidden p-3 bg-blue-50 rounded-lg text-sm text-blue-700 space-y-1">
+                            <p><strong>当前配置：</strong><span id="ab-summary-interval"></span>小时备份一次</p>
+                            <p><strong>保存位置：</strong><span id="ab-summary-path"></span></p>
+                            <p><strong>上次备份：</strong><span id="ab-summary-last"></span></p>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 border-t flex items-center justify-end gap-3">
+                        <button onclick="closeAutoBackupModal()" class="px-4 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm">取消</button>
+                        <button onclick="saveAutoBackupConfig()" class="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 凭证审核弹窗 v8.0 -->
+            <div id="voucher-audit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div class="bg-white rounded-2xl shadow-xl p-0 max-w-lg w-full mx-4 overflow-hidden">
+                    <div class="px-6 py-4 border-b flex items-center justify-between bg-gray-50 rounded-t-2xl">
+                        <h3 class="text-lg font-bold text-gray-900">凭证审核</h3>
+                        <button onclick="closeVoucherAuditModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <div id="voucher-audit-preview" class="mb-4 p-4 bg-gray-50 rounded-lg text-sm space-y-2"></div>
+                        <div class="mb-4">
+                            <label class="block text-sm text-gray-600 mb-2">选择银行账号（不选则使用默认）</label>
+                            <select id="audit-bank-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="">使用默认账号</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-end gap-3">
+                            <button onclick="closeVoucherAuditModal()" class="px-4 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm">取消</button>
+                            <button onclick="confirmVoucherAudit()" class="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">确认审核</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 凭证预览弹窗 v8.3.1 -->
+            <div id="voucher-preview-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div class="bg-white rounded-2xl shadow-xl p-0 max-w-2xl w-full mx-4 overflow-hidden">
+                    <div class="px-6 py-4 border-b flex items-center justify-between bg-gray-50 rounded-t-2xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">凭证预览</h3>
+                                <p class="text-xs text-gray-500">会计借贷记账法格式</p>
+                            </div>
+                        </div>
+                        <button onclick="closeVoucherPreview()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <!-- 凭证头信息 -->
+                        <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+                            <div><span class="text-gray-500">凭证号：</span><span id="preview-vno" class="font-mono font-medium text-gray-900"></span></div>
+                            <div><span class="text-gray-500">日期：</span><span id="preview-vdate" class="text-gray-900"></span></div>
+                            <div><span class="text-gray-500">状态：</span><span id="preview-vstatus"></span></div>
+                            <div><span class="text-gray-500">来源：</span><span id="preview-vsource" class="text-gray-900"></span></div>
+                            <div class="col-span-2"><span class="text-gray-500">摘要：</span><span id="preview-vremark" class="text-gray-900"></span></div>
+                        </div>
+                        <!-- 分录表格 -->
+                        <div class="border rounded-lg overflow-hidden mb-4">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left font-medium text-gray-700 w-[50%]">科目名称</th>
+                                        <th class="px-4 py-2 text-right font-medium text-gray-700 w-[25%]">借方金额</th>
+                                        <th class="px-4 py-2 text-right font-medium text-gray-700 w-[25%]">贷方金额</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="preview-entries-body" class="divide-y">
+                                    <!-- 动态生成 -->
+                                </tbody>
+                                <tfoot class="bg-gray-50 border-t-2 border-gray-200">
+                                    <tr>
+                                        <td class="px-4 py-2 font-medium text-gray-900">合 计</td>
+                                        <td id="preview-total-debit" class="px-4 py-2 text-right font-mono font-medium text-gray-900"></td>
+                                        <td id="preview-total-credit" class="px-4 py-2 text-right font-mono font-medium text-gray-900"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <!-- 操作按钮 -->
+                        <div id="preview-actions" class="flex items-center justify-end gap-3">
+                            <!-- 草稿：审核+删除，已审核：仅关闭 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系统设置页面 -->
+            <div id="page-settings" class="page-content space-y-6 hidden">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">系统设置</h2>
+                    <p class="text-sm text-gray-500 mt-1">管理诊所信息和收费大类</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                        <h3 class="text-lg font-semibold text-gray-900">诊所信息</h3>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <input type="text" id="setting-clinic-name" class="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="请输入诊所名称">
+                        <button id="save-clinic-btn" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            保存
+                        </button>
+                    </div>
+                </div>
+                <!-- 收费大类维护 v7.2.2 -->
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">收费大类维护</h3>
+                        <span id="setting-cat-count" class="text-sm text-gray-500"></span>
+                    </div>
+                    <!-- 添加新大类 -->
+                    <div class="flex items-center gap-3 mb-6 p-4 bg-gray-50 rounded-lg flex-wrap">
+                        <input type="text" id="new-cat-name" placeholder="输入新收费大类名称" class="flex-1 min-w-[150px] px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" onkeydown="if(event.key==='Enter') addCategory()">
+                        <select id="new-cat-type" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="income">收入</option>
+                            <option value="expense">支出</option>
+                        </select>
+                        <button onclick="addCategory()" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            添加
+                        </button>
+                    </div>
+                    <!-- 收入大类列表 -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-medium text-emerald-600 mb-2 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            收入收费大类
+                        </h4>
+                        <div id="setting-cat-income-list" class="divide-y border rounded-lg"></div>
+                    </div>
+                    <!-- 支出大类列表 -->
+                    <div>
+                        <h4 class="text-sm font-medium text-red-500 mb-2 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                            支出收费大类
+                        </h4>
+                        <div id="setting-cat-expense-list" class="divide-y border rounded-lg"></div>
+                    </div>
+                </div>
+
+                <!-- 银行账号维护 v8.0 -->
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                            <h3 class="text-lg font-semibold text-gray-900">银行账号维护</h3>
+                        </div>
+                        <span id="bank-count" class="text-sm text-gray-500"></span>
+                    </div>
+                    <div class="flex items-center gap-3 mb-6 p-4 bg-gray-50 rounded-lg flex-wrap">
+                        <input type="text" id="new-bank-name" placeholder="账户名称，如：对公账户-工行" class="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" onkeydown="if(event.key==='Enter') addBank()">
+                        <input type="text" id="new-bank-branch" placeholder="开户行（可选）" class="flex-1 min-w-[150px] px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        <input type="text" id="new-bank-no" placeholder="银行账号（可选）" class="flex-1 min-w-[150px] px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        <button onclick="addBank()" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            添加
+                        </button>
+                    </div>
+                    <div id="bank-list" class="divide-y"></div>
+                </div>
+
+                <!-- 数据备份 -->
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+                        <h3 class="text-lg font-semibold text-gray-900">数据备份与恢复</h3>
+                    </div>
+                    <div class="flex items-center gap-4 flex-wrap mb-4">
+                        <button onclick="startBackup()" class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            立即备份
+                        </button>
+                        <input type="file" id="restore-file" accept=".json" class="hidden" onchange="startRestore(this)">
+                        <label for="restore-file" class="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                            导入备份
+                        </label>
+                        <button onclick="openAutoBackupModal()" class="flex items-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            设置自动备份
+                        </button>
+                    </div>
+                    <div id="auto-backup-status-bar" class="hidden mb-3 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-sm text-emerald-700">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="auto-backup-status-text">自动备份已启用</span>
+                    </div>
+                    <p class="text-xs text-gray-400">备份文件为JSON格式，可在本地保存后随时恢复</p>
+                </div>
+            </div>
+
+            <!-- 收费大类明细弹窗 v7.3.1 -->
+            <div id="cat-detail-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div class="bg-white rounded-2xl shadow-xl p-0 max-w-3xl w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col">
+                    <!-- 弹窗头部 -->
+                    <div class="px-6 py-4 border-b flex items-center justify-between bg-gray-50 rounded-t-2xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900" id="cat-detail-title">大类明细</h3>
+                                <p class="text-xs text-gray-500" id="cat-detail-subtitle">--</p>
+                            </div>
+                        </div>
+                        <button onclick="closeCatDetailModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <!-- 弹窗内容 -->
+                    <div class="flex-1 overflow-y-auto p-6">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left font-medium text-gray-600">日期</th>
+                                        <th class="px-4 py-3 text-left font-medium text-gray-600">对象</th>
+                                        <th class="px-4 py-3 text-left font-medium text-gray-600">具体项目</th>
+                                        <th class="px-4 py-3 text-right font-medium text-gray-600">应收</th>
+                                        <th class="px-4 py-3 text-right font-medium text-gray-600">实收</th>
+                                        <th class="px-4 py-3 text-right font-medium text-gray-600">手续费</th>
+                                        <th class="px-4 py-3 text-left font-medium text-gray-600">备注</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cat-detail-body" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- 弹窗底部 -->
+                    <div class="px-6 py-3 border-t bg-gray-50 rounded-b-2xl flex items-center justify-between">
+                        <span class="text-xs text-gray-500" id="cat-detail-count">共 0 条记录</span>
+                        <span class="text-xs text-gray-400">来自最近50条收入记录</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 编辑记录弹窗 -->
+            <div id="edit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div class="bg-white rounded-2xl shadow-xl p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-5">
+                        <h3 class="text-lg font-bold text-gray-900">编辑记录</h3>
+                        <button onclick="closeEditModal()" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <form id="edit-form" onsubmit="saveEditRecord(event)" class="space-y-4">
+                        <input type="hidden" id="edit-id">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">日期</label>
+                                <input type="date" id="edit-date" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">类型</label>
+                                <select id="edit-type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="income">收入</option>
+                                    <option value="expense">支出</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">对象</label>
+                            <input type="text" id="edit-counterparty" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">收费大类</label>
+                            <select id="edit-category" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">具体项目</label>
+                            <input type="text" id="edit-item" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">应收金额</label>
+                                <input type="number" id="edit-receivable" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">实收金额</label>
+                                <input type="number" id="edit-real" step="0.01" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">支付方式</label>
+                                <select id="edit-payment" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="alipay">支付宝</option>
+                                    <option value="wechat">微信支付</option>
+                                    <option value="cash">现金</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">备注</label>
+                                <input type="text" id="edit-remark" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-end gap-3 pt-2">
+                            <button type="button" onclick="closeEditModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm">取消</button>
+                            <button type="submit" class="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                保存
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 科幻备份进度弹窗 -->
+            <div id="backup-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+                <div class="relative bg-slate-900 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 overflow-hidden" style="border: 1px solid #05966940;">
+                    <!-- 背景装饰 -->
+                    <div class="absolute inset-0 opacity-10" style="background: radial-gradient(circle at 50% 50%, #059669, transparent 70%);"></div>
+                    <div class="relative z-10 text-center">
+                        <div class="flex items-center justify-center gap-3 mb-2">
+                            <svg class="w-6 h-6 text-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                            <h3 id="backup-title" class="text-lg font-bold text-white tracking-wide" style="text-shadow: 0 0 10px #05966980;">系统备份中</h3>
+                        </div>
+                        <p id="backup-status" class="text-sm text-gray-400 mb-6">正在接入核心数据模块...</p>
+
+                        <!-- 科幻进度条 -->
+                        <div class="relative h-3 bg-slate-800 rounded-full overflow-hidden mb-2" style="box-shadow: inset 0 0 10px #000, 0 0 5px #05966930;">
+                            <div id="backup-progress" class="h-full rounded-full transition-all duration-300 ease-out" style="width: 0%; background: linear-gradient(90deg, #047857, #059669, #34d399); box-shadow: 0 0 10px #059669, 0 0 20px #05966960;"></div>
+                            <!-- 扫描线 -->
+                            <div class="absolute inset-0" style="background: repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(255,255,255,0.08) 8px, rgba(255,255,255,0.08) 9px);"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span id="backup-percent" class="text-primary font-mono" style="text-shadow: 0 0 5px #05966980;">0%</span>
+                            <span id="backup-detail" class="text-gray-500 font-mono">初始化...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据比对结果弹窗 -->
+            <div id="compare-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div class="bg-white rounded-2xl shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">数据比对结果</h3>
+                                <p class="text-sm text-gray-500">发现与现有系统重复的数据</p>
+                            </div>
+                        </div>
+                        <button onclick="closeCompareModal()" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                        <p class="text-sm text-amber-800">共发现 <strong id="compare-dup-count">0</strong> 条重复记录。重复判断规则：日期 + 对象 + 收费大类 + 具体项目 + 实收金额 全部相同。</p>
+                    </div>
+                    <div class="flex-1 overflow-y-auto mb-4 border rounded-lg">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-2 text-left font-medium text-gray-600">日期</th><th class="px-4 py-2 text-left font-medium text-gray-600">对象</th><th class="px-4 py-2 text-left font-medium text-gray-600">收费大类</th><th class="px-4 py-2 text-left font-medium text-gray-600">具体项目</th><th class="px-4 py-2 text-right font-medium text-gray-600">实收金额</th></tr></thead>
+                            <tbody id="compare-body" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex items-center justify-end gap-3 pt-2 border-t">
+                        <button onclick="closeCompareModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm">取消导入</button>
+                        <button onclick="confirmImport(true)" class="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm">
+                            忽略重复（跳过）
+                        </button>
+                        <button onclick="confirmImport(false)" class="px-5 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors text-sm">
+                            重复新增（保留）
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 恢复进度弹窗 -->
+            <div id="restore-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+                <div class="relative bg-slate-900 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 overflow-hidden" style="border: 1px solid #05966940;">
+                    <div class="absolute inset-0 opacity-10" style="background: radial-gradient(circle at 50% 50%, #059669, transparent 70%);"></div>
+                    <div class="relative z-10 text-center">
+                        <div class="flex items-center justify-center gap-3 mb-2">
+                            <svg class="w-6 h-6 text-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <h3 class="text-lg font-bold text-white tracking-wide" style="text-shadow: 0 0 10px #05966980;">数据恢复中</h3>
+                        </div>
+                        <p id="restore-status" class="text-sm text-gray-400 mb-6">正在接入核心数据模块...</p>
+                        <div class="relative h-3 bg-slate-800 rounded-full overflow-hidden mb-2" style="box-shadow: inset 0 0 10px #000, 0 0 5px #05966930;">
+                            <div id="restore-progress" class="h-full rounded-full transition-all duration-300 ease-out" style="width: 0%; background: linear-gradient(90deg, #047857, #059669, #34d399); box-shadow: 0 0 10px #059669, 0 0 20px #05966960;"></div>
+                            <div class="absolute inset-0" style="background: repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(255,255,255,0.08) 8px, rgba(255,255,255,0.08) 9px);"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span id="restore-percent" class="text-primary font-mono" style="text-shadow: 0 0 5px #05966980;">0%</span>
+                            <span id="restore-detail" class="text-gray-500 font-mono">初始化...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 恢复进度弹窗结束 -->
+
+
+        </main>
+    </div>
+    <script src="/js/app.js"></script>
+</body>
+</html>
