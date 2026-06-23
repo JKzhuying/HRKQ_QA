@@ -165,7 +165,7 @@ function showPage(page) {
     else if (page === 'settings') { loadSettings(); loadBanks(); }
     else if (page === 'entry') initEntryPage();
     else if (page === 'vouchers') loadVouchers('');
-    else if (page === 'finance') { loadFinanceL1(); loadFinanceL2(); loadFinanceMapping(); }
+    else if (page === 'finance') { checkOpeningBalance(); loadFinanceL1(); loadFinanceL2(); loadFinanceMapping(); }
 }
 
 document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
@@ -2565,4 +2565,222 @@ async function deleteMapping(id) {
     if (!confirm('确定删除映射？')) return;
     var res = await api('/api/account-subjects/mapping/' + id, { method: 'DELETE' });
     if (res.code === 200) loadFinanceMapping();
+}
+
+// ==================== v8.5.0 期初余额录入 ====================
+
+var openingSubjectsData = [];  // 缓存科目数据
+var openingRowCounter = 0;     // 行计数器
+
+/** 检测是否需要录入期初余额 */
+async function checkOpeningBalance() {
+    try {
+        var res = await api('/api/accounting/check-opening');
+        if (res.code === 200 && res.required) {
+            // 需要录入，延迟一点再弹，让页面先加载完
+            setTimeout(function() { openOpeningBalanceModal(); }, 500);
+        }
+    } catch (e) {
+        console.log('[OpeningBalance] check failed:', e);
+    }
+}
+
+/** 打开期初余额录入弹窗 */
+async function openOpeningBalanceModal() {
+    document.getElementById('opening-balance-modal').classList.remove('hidden');
+    await loadOpeningSubjects();
+    // 默认添加5行空行
+    var tbody = document.getElementById('opening-balance-body');
+    tbody.innerHTML = '';
+    for (var i = 0; i < 5; i++) { addOpeningRow(); }
+}
+
+/** 关闭弹窗 */
+function closeOpeningBalanceModal() {
+    document.getElementById('opening-balance-modal').classList.add('hidden');
+}
+
+/** 加载科目列表 */
+async function loadOpeningSubjects() {
+    var res = await api('/api/accounting/subjects');
+    if (res.code === 200) {
+        openingSubjectsData = res.data.subjects;
+    }
+}
+
+/** 获取一级科目下拉HTML */
+function getL1SelectHtml(selectedCode) {
+    var html = '<option value="">选择一级科目</option>';
+    for (var i = 0; i < openingSubjectsData.length; i++) {
+        var s = openingSubjectsData[i];
+        var sel = (s.code === selectedCode) ? ' selected' : '';
+        html += '<option value="' + s.code + '" data-category="' + s.category + '"' + sel + '>' + s.code + ' ' + s.name + '</option>';
+    }
+    return html;
+}
+
+/** 获取二级科目下拉HTML（根据一级科目编码） */
+function getL2SelectHtml(l1Code, selectedCode) {
+    var html = '<option value="">直接录入一级科目</option>';
+    if (!l1Code) return html;
+    for (var i = 0; i < openingSubjectsData.length; i++) {
+        if (openingSubjectsData[i].code === l1Code) {
+            var children = openingSubjectsData[i].children;
+            for (var j = 0; j < children.length; j++) {
+                var c = children[j];
+                var sel = (c.code === selectedCode) ? ' selected' : '';
+                html += '<option value="' + c.code + '"' + sel + '>' + c.code + ' ' + c.name + '</option>';
+            }
+            break;
+        }
+    }
+    return html;
+}
+
+/** 添加一行 */
+function addOpeningRow() {
+    openingRowCounter++;
+    var tbody = document.getElementById('opening-balance-body');
+    var tr = document.createElement('tr');
+    tr.id = 'opening-row-' + openingRowCounter;
+    tr.className = 'opening-row';
+    tr.innerHTML =
+        '<td class="px-2 py-2">' +
+            '<select class="opening-l1 w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary" onchange="onL1Change(this)">' +
+                getL1SelectHtml() +
+            '</select>' +
+        '</td>' +
+        '<td class="px-2 py-2">' +
+            '<select class="opening-l2 w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary" onchange="onL2Change(this)">' +
+                '<option value="">直接录入一级科目</option>' +
+            '</select>' +
+        '</td>' +
+        '<td class="px-2 py-2">' +
+            '<input type="number" class="opening-balance w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-primary focus:border-primary" placeholder="0.00" step="0.01">' +
+        '</td>' +
+        '<td class="px-2 py-2 text-center">' +
+            '<button type="button" onclick="removeOpeningRow(this)" class="text-red-500 hover:text-red-700 p-1" title="删除">' +
+                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
+            '</button>' +
+        '</td>';
+    tbody.appendChild(tr);
+}
+
+/** 删除一行 */
+function removeOpeningRow(btn) {
+    var row = btn.closest('tr');
+    var tbody = document.getElementById('opening-balance-body');
+    if (tbody.children.length <= 1) {
+        alert('至少保留一行');
+        return;
+    }
+    row.remove();
+}
+
+/** 一级科目变化时更新二级选项 */
+function onL1Change(select) {
+    var l1Code = select.value;
+    var row = select.closest('tr');
+    var l2Select = row.querySelector('.opening-l2');
+    l2Select.innerHTML = getL2SelectHtml(l1Code);
+}
+
+/** 二级科目变化时：如果选择了二级，禁用余额输入的一级模式标记 */
+function onL2Change(select) {
+    // 不需要特殊处理，保存时判断即可
+}
+
+/** 收集表格数据 */
+function collectOpeningEntries() {
+    var entries = [];
+    var rows = document.querySelectorAll('.opening-row');
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var l1 = row.querySelector('.opening-l1').value;
+        var l2 = row.querySelector('.opening-l2').value;
+        var bal = parseFloat(row.querySelector('.opening-balance').value) || 0;
+        if (!l1) continue;  // 跳过空行
+        entries.push({
+            l1_code: l1,
+            l2_code: l2 || null,
+            balance: bal,
+            is_l1_entry: !l2,
+        });
+    }
+    return entries;
+}
+
+/** 保存期初余额 */
+async function saveOpeningBalance() {
+    var entries = collectOpeningEntries();
+    if (entries.length === 0) {
+        alert('请至少录入一个科目');
+        return;
+    }
+    var res = await api('/api/accounting/opening-balance', {
+        method: 'POST',
+        body: JSON.stringify({ entries: entries })
+    });
+    if (res.code === 200) {
+        alert('期初余额录入成功！');
+        closeOpeningBalanceModal();
+    } else {
+        alert(res.message || '保存失败');
+    }
+}
+
+/** 跳过 */
+async function skipOpeningBalance() {
+    if (!confirm('确定跳过？24小时内不再提醒您录入期初余额。')) return;
+    var res = await api('/api/accounting/opening-balance/skip', { method: 'POST' });
+    if (res.code === 200) {
+        closeOpeningBalanceModal();
+    }
+}
+
+/** 下载模板 */
+function downloadOpeningTemplate() {
+    window.location.href = '/api/accounting/opening-balance/template';
+}
+
+/** 导入Excel */
+async function importOpeningExcel() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx';
+    input.onchange = async function() {
+        var file = input.files[0];
+        if (!file) return;
+        var formData = new FormData();
+        formData.append('file', file);
+        try {
+            var resp = await fetch('/api/accounting/opening-balance/import', {
+                method: 'POST',
+                body: formData
+            });
+            var res = await resp.json();
+            if (res.code === 200) {
+                // 将导入的数据填充到表格
+                var tbody = document.getElementById('opening-balance-body');
+                tbody.innerHTML = '';
+                var entries = res.data.entries;
+                for (var i = 0; i < entries.length; i++) {
+                    addOpeningRow();
+                    var row = tbody.lastChild;
+                    var e = entries[i];
+                    row.querySelector('.opening-l1').value = e.l1_code;
+                    // 更新二级选项
+                    onL1Change(row.querySelector('.opening-l1'));
+                    if (e.l2_code) row.querySelector('.opening-l2').value = e.l2_code;
+                    row.querySelector('.opening-balance').value = e.balance;
+                }
+                alert('成功导入 ' + entries.length + ' 条记录，请核对后保存');
+            } else {
+                alert(res.message || '导入失败');
+            }
+        } catch (err) {
+            alert('导入失败: ' + err.message);
+        }
+    };
+    input.click();
 }

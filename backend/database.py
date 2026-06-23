@@ -384,6 +384,89 @@ def init_database():
         except Exception:
             pass  # 字段已存在或其他错误
 
+    # ========== 11. 会计期间表 v8.5 ==========
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS accounting_periods (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            year INT NOT NULL,
+            month INT NOT NULL,
+            status ENUM('open', 'closing', 'closed') DEFAULT 'open',
+            is_year_end BOOLEAN DEFAULT FALSE,
+            closed_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_year_month (year, month)
+        )
+    ''')
+
+    # ========== 12. 科目期初余额表 v8.5 ==========
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS subject_balances (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            period_id INT NOT NULL,
+            subject_l1_code VARCHAR(10) NOT NULL,
+            subject_l2_code VARCHAR(15) NULL COMMENT 'NULL表示一级科目直接录入',
+            opening_balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+            current_debit DECIMAL(12,2) NOT NULL DEFAULT 0,
+            current_credit DECIMAL(12,2) NOT NULL DEFAULT 0,
+            closing_balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+            is_l1_entry BOOLEAN DEFAULT FALSE COMMENT '是否一级科目直接录入',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_period_subject (period_id, subject_l1_code, subject_l2_code)
+        )
+    ''')
+
+    # ========== 13. 期初余额跳过记录 v8.5 ==========
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS opening_balance_skip_log (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            skipped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # ========== 14. 扩展一级科目预设 v8.5 ==========
+    # v8.5: 增加口腔诊所常用一级科目
+    l1_extended = [
+        # 资产类
+        ('1012', '其他货币资金', '资产', 'debit'),
+        ('1121', '应收票据', '资产', 'debit'),
+        ('1401', '材料采购', '资产', 'debit'),
+        ('1408', '委托加工物资', '资产', 'debit'),
+        ('1603', '固定资产清理', '资产', 'debit'),
+        ('1701', '无形资产', '资产', 'debit'),
+        ('1801', '长期待摊费用', '资产', 'debit'),
+        ('1901', '待处理财产损溢', '资产', 'debit'),
+        # 负债类
+        ('2101', '交易性金融负债', 'liability', 'credit'),
+        ('2201', '应付票据', 'liability', 'credit'),
+        ('2211', '应付职工薪酬', 'liability', 'credit'),
+        ('2231', '应付利息', 'liability', 'credit'),
+        ('2232', '应付股利', 'liability', 'credit'),
+        ('2241', '其他应付款', 'liability', 'credit'),
+        ('2401', '递延收益', 'liability', 'credit'),
+        # 权益类
+        ('4002', '资本公积', 'equity', 'credit'),
+        ('4101', '盈余公积', 'equity', 'credit'),
+        # 成本类
+        ('5101', '制造费用', 'cost', 'debit'),
+        ('5301', '研发支出', 'cost', 'debit'),
+        # 损益 - 收入
+        ('6051', '其他业务收入', 'income', 'credit'),
+        ('6111', '投资收益', 'income', 'credit'),
+        ('6301', '营业外收入', 'income', 'credit'),
+        # 损益 - 费用
+        ('6401', '主营业务成本', 'expense', 'debit'),
+        ('6411', '利息支出', 'expense', 'debit'),
+        ('6601', '销售费用', 'expense', 'debit'),
+        ('6701', '资产减值损失', 'expense', 'debit'),
+        ('6711', '营业外支出', 'expense', 'debit'),
+        ('6801', '所得税费用', 'expense', 'debit'),
+    ]
+    for c, n, cat, d in l1_extended:
+        cursor.execute(
+            'INSERT IGNORE INTO account_subjects_l1 (code, name, category, direction) VALUES (%s, %s, %s, %s)',
+            (c, n, cat, d)
+        )
+
     conn.commit()
     conn.close()
-    print('MySQL init done v8.3')
+    print('MySQL init done v8.5')

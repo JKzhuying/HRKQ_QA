@@ -35,6 +35,7 @@ from routes.account_subjects import subjects_bp
 from routes.vouchers import vouchers_bp
 from routes.auto_backup import auto_backup_bp, start_auto_backup_scheduler
 from routes.transfers import transfers_bp
+from routes.accounting import accounting_bp
 
 app.register_blueprint(settings_bp, url_prefix='/api/settings')
 app.register_blueprint(transactions_bp, url_prefix='/api/transactions')
@@ -44,6 +45,7 @@ app.register_blueprint(subjects_bp, url_prefix='/api/account-subjects')
 app.register_blueprint(vouchers_bp, url_prefix='/api/vouchers')
 app.register_blueprint(auto_backup_bp, url_prefix='/api/auto-backup')
 app.register_blueprint(transfers_bp, url_prefix='/api/transfers')
+app.register_blueprint(accounting_bp, url_prefix='/api/accounting')
 
 # v8.1 自动备份：首次请求时启动
 _auto_backup_started = False
