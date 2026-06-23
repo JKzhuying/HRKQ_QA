@@ -1535,124 +1535,136 @@ function clearAllEntryRows() {
 }
 
 async function saveAllEntries() {
+    // v8.3.2: 保存按钮只对当前激活标签页负责
+    var tab = currentEntryTab;
     var records = [];
-    var errors = [];
-
-    // 收集收入行
-    var incomeDates = document.querySelectorAll('.entry-income-date');
-    var incomeCounterparties = document.querySelectorAll('.entry-income-counterparty');
-    var incomeCategories = document.querySelectorAll('.entry-income-category');
-    var incomeItems = document.querySelectorAll('.entry-income-item');
-    var incomeReceivables = document.querySelectorAll('.entry-income-receivable');
-    var incomeReals = document.querySelectorAll('.entry-income-real');
-    var incomeRemarks = document.querySelectorAll('.entry-income-remark');
-
-    for (var i = 0; i < incomeDates.length; i++) {
-        var realVal = parseFloat(incomeReals[i].value);
-        if (!incomeDates[i].value && !incomeCounterparties[i].value && !realVal) continue; // 跳过完全空行
-        if (!realVal || realVal <= 0) {
-            errors.push('收入第' + (i + 1) + '行：实收金额必须大于0');
-            continue;
-        }
-        records.push({
-            trans_date: incomeDates[i].value,
-            trans_type: 'income',
-            counterparty: incomeCounterparties[i].value || '',
-            category: incomeCategories[i].value || '',
-            item_name: incomeItems[i].value || '',
-            amount_receivable: parseFloat(incomeReceivables[i].value) || 0,
-            amount_real: realVal,
-            payment_method: 'cash',
-            remark: incomeRemarks[i].value || '',
-        });
-    }
-
-    // 收集支出行
-    var expenseDates = document.querySelectorAll('.entry-expense-date');
-    var expenseCounterparties = document.querySelectorAll('.entry-expense-counterparty');
-    var expenseCategories = document.querySelectorAll('.entry-expense-category');
-    var expenseItems = document.querySelectorAll('.entry-expense-item');
-    var expenseReceivables = document.querySelectorAll('.entry-expense-receivable');
-    var expenseReals = document.querySelectorAll('.entry-expense-real');
-    var expenseRemarks = document.querySelectorAll('.entry-expense-remark');
-
-    for (var i = 0; i < expenseDates.length; i++) {
-        var realVal = parseFloat(expenseReals[i].value);
-        if (!expenseDates[i].value && !expenseCounterparties[i].value && !realVal) continue; // 跳过完全空行
-        if (!realVal || realVal <= 0) {
-            errors.push('支出第' + (i + 1) + '行：实收金额必须大于0');
-            continue;
-        }
-        records.push({
-            trans_date: expenseDates[i].value,
-            trans_type: 'expense',
-            counterparty: expenseCounterparties[i].value || '',
-            category: expenseCategories[i].value || '',
-            item_name: expenseItems[i].value || '',
-            amount_receivable: parseFloat(expenseReceivables[i].value) || 0,
-            amount_real: realVal,
-            payment_method: 'cash',
-            remark: expenseRemarks[i].value || '',
-        });
-    }
-
-    // v8.3: 收集调拨行
-    var transferDates = document.querySelectorAll('.entry-transfer-date');
-    var transferFroms = document.querySelectorAll('.entry-transfer-from');
-    var transferTos = document.querySelectorAll('.entry-transfer-to');
-    var transferPlanneds = document.querySelectorAll('.entry-transfer-planned');
-    var transferReals = document.querySelectorAll('.entry-transfer-real');
-    var transferRemarks = document.querySelectorAll('.entry-transfer-remark');
     var transferRecords = [];
+    var errors = [];
+    var successCount = 0;
+    var failCount = 0;
+    var apiUrl = '';
 
-    for (var i = 0; i < transferDates.length; i++) {
-        var plannedVal = parseFloat(transferPlanneds[i].value);
-        if (!transferDates[i].value && !transferFroms[i].value && !plannedVal) continue;
-        if (!plannedVal || plannedVal <= 0) {
-            errors.push('调拨第' + (i + 1) + '行：计划金额必须大于0');
-            continue;
+    if (tab === 'income') {
+        // ===== 只收集收入行 =====
+        var incomeDates = document.querySelectorAll('.entry-income-date');
+        var incomeCounterparties = document.querySelectorAll('.entry-income-counterparty');
+        var incomeCategories = document.querySelectorAll('.entry-income-category');
+        var incomeItems = document.querySelectorAll('.entry-income-item');
+        var incomeReceivables = document.querySelectorAll('.entry-income-receivable');
+        var incomeReals = document.querySelectorAll('.entry-income-real');
+        var incomeRemarks = document.querySelectorAll('.entry-income-remark');
+
+        for (var i = 0; i < incomeDates.length; i++) {
+            var realVal = parseFloat(incomeReals[i].value);
+            if (!incomeDates[i].value && !incomeCounterparties[i].value && !realVal) continue;
+            if (!realVal || realVal <= 0) {
+                errors.push('收入第' + (i + 1) + '行：实收金额必须大于0');
+                continue;
+            }
+            records.push({
+                trans_date: incomeDates[i].value,
+                trans_type: 'income',
+                counterparty: incomeCounterparties[i].value || '',
+                category: incomeCategories[i].value || '',
+                item_name: incomeItems[i].value || '',
+                amount_receivable: parseFloat(incomeReceivables[i].value) || 0,
+                amount_real: realVal,
+                payment_method: 'cash',
+                remark: incomeRemarks[i].value || '',
+            });
         }
-        if (!transferFroms[i].value) {
-            errors.push('调拨第' + (i + 1) + '行：转出账户不能为空');
-            continue;
+        apiUrl = '/api/transactions/';
+
+    } else if (tab === 'expense') {
+        // ===== 只收集支出行 =====
+        var expenseDates = document.querySelectorAll('.entry-expense-date');
+        var expenseCounterparties = document.querySelectorAll('.entry-expense-counterparty');
+        var expenseCategories = document.querySelectorAll('.entry-expense-category');
+        var expenseItems = document.querySelectorAll('.entry-expense-item');
+        var expenseReceivables = document.querySelectorAll('.entry-expense-receivable');
+        var expenseReals = document.querySelectorAll('.entry-expense-real');
+        var expenseRemarks = document.querySelectorAll('.entry-expense-remark');
+
+        for (var i = 0; i < expenseDates.length; i++) {
+            var realVal = parseFloat(expenseReals[i].value);
+            if (!expenseDates[i].value && !expenseCounterparties[i].value && !realVal) continue;
+            if (!realVal || realVal <= 0) {
+                errors.push('支出第' + (i + 1) + '行：实付金额必须大于0');
+                continue;
+            }
+            records.push({
+                trans_date: expenseDates[i].value,
+                trans_type: 'expense',
+                counterparty: expenseCounterparties[i].value || '',
+                category: expenseCategories[i].value || '',
+                item_name: expenseItems[i].value || '',
+                amount_receivable: parseFloat(expenseReceivables[i].value) || 0,
+                amount_real: realVal,
+                payment_method: 'cash',
+                remark: expenseRemarks[i].value || '',
+            });
         }
-        if (!transferTos[i].value) {
-            errors.push('调拨第' + (i + 1) + '行：转入账户不能为空');
-            continue;
+        apiUrl = '/api/transactions/';
+
+    } else if (tab === 'transfer') {
+        // ===== 只收集调拨行 =====
+        var transferDates = document.querySelectorAll('.entry-transfer-date');
+        var transferFroms = document.querySelectorAll('.entry-transfer-from');
+        var transferTos = document.querySelectorAll('.entry-transfer-to');
+        var transferPlanneds = document.querySelectorAll('.entry-transfer-planned');
+        var transferReals = document.querySelectorAll('.entry-transfer-real');
+        var transferRemarks = document.querySelectorAll('.entry-transfer-remark');
+
+        for (var i = 0; i < transferDates.length; i++) {
+            var plannedVal = parseFloat(transferPlanneds[i].value);
+            if (!transferDates[i].value && !transferFroms[i].value && !plannedVal) continue;
+            if (!plannedVal || plannedVal <= 0) {
+                errors.push('调拨第' + (i + 1) + '行：计划金额必须大于0');
+                continue;
+            }
+            if (!transferFroms[i].value) {
+                errors.push('调拨第' + (i + 1) + '行：转出账户不能为空');
+                continue;
+            }
+            if (!transferTos[i].value) {
+                errors.push('调拨第' + (i + 1) + '行：转入账户不能为空');
+                continue;
+            }
+            var fromSel = transferFroms[i];
+            var toSel = transferTos[i];
+            var fromBankId = fromSel.options[fromSel.selectedIndex].getAttribute('data-id');
+            var toBankId = toSel.options[toSel.selectedIndex].getAttribute('data-id');
+            transferRecords.push({
+                trans_date: transferDates[i].value,
+                from_account: fromSel.value,
+                to_account: toSel.value,
+                from_bank_id: fromBankId || null,
+                to_bank_id: toBankId || null,
+                amount_planned: plannedVal,
+                amount_real: parseFloat(transferReals[i].value) || plannedVal,
+                remark: transferRemarks[i].value || '',
+            });
         }
-        var fromSel = transferFroms[i];
-        var toSel = transferTos[i];
-        var fromBankId = fromSel.options[fromSel.selectedIndex].getAttribute('data-id');
-        var toBankId = toSel.options[toSel.selectedIndex].getAttribute('data-id');
-        transferRecords.push({
-            trans_date: transferDates[i].value,
-            from_account: fromSel.value,
-            to_account: toSel.value,
-            from_bank_id: fromBankId || null,
-            to_bank_id: toBankId || null,
-            amount_planned: plannedVal,
-            amount_real: parseFloat(transferReals[i].value) || plannedVal,
-            remark: transferRemarks[i].value || '',
-        });
     }
 
+    // 校验
     if (errors.length > 0) {
         alert('请修正以下问题后再保存：\n' + errors.join('\n'));
         return;
     }
-    if (records.length === 0 && transferRecords.length === 0) {
+
+    var itemsToSave = tab === 'transfer' ? transferRecords : records;
+    if (itemsToSave.length === 0) {
         alert('没有可保存的数据，请至少填写一行');
         return;
     }
 
-    // 逐条保存收入/支出
-    var successCount = 0;
-    var failCount = 0;
-    for (var i = 0; i < records.length; i++) {
+    // 逐条保存
+    for (var i = 0; i < itemsToSave.length; i++) {
         try {
-            var res = await api('/api/transactions/', {
+            var res = await api(tab === 'transfer' ? '/api/transfers/' : apiUrl, {
                 method: 'POST',
-                body: JSON.stringify(records[i]),
+                body: JSON.stringify(itemsToSave[i]),
             });
             if (res.code === 200) {
                 successCount++;
@@ -1664,41 +1676,25 @@ async function saveAllEntries() {
         }
     }
 
-    // v8.3: 保存调拨记录
-    var transferSuccess = 0;
-    var transferFail = 0;
-    for (var i = 0; i < transferRecords.length; i++) {
-        try {
-            var res = await api('/api/transfers/', {
-                method: 'POST',
-                body: JSON.stringify(transferRecords[i]),
-            });
-            if (res.code === 200) {
-                transferSuccess++;
-            } else {
-                transferFail++;
-            }
-        } catch (err) {
-            transferFail++;
+    if (failCount === 0) {
+        var typeLabel = tab === 'income' ? '收入' : tab === 'expense' ? '支出' : '调拨';
+        alert(typeLabel + '保存成功！共 ' + successCount + ' 条记录');
+
+        // 只清空当前标签页，保留其他标签页数据
+        if (tab === 'income') {
+            document.getElementById('entry-income-body').innerHTML = '';
+            entryIncomeCount = 0;
+            addEntryRow('income');
+        } else if (tab === 'expense') {
+            document.getElementById('entry-expense-body').innerHTML = '';
+            entryExpenseCount = 0;
+            addEntryRow('expense');
+        } else if (tab === 'transfer') {
+            document.getElementById('entry-transfer-body').innerHTML = '';
+            entryTransferCount = 0;
+            addEntryRow('transfer');
         }
-    }
 
-    var totalSuccess = successCount + transferSuccess;
-    var totalFail = failCount + transferFail;
-
-    if (totalFail === 0) {
-        alert('全部保存成功！共 ' + totalSuccess + ' 条记录（收入/支出 ' + successCount + ' + 调拨 ' + transferSuccess + '）');
-        // 清空并重新初始化
-        document.getElementById('entry-income-body').innerHTML = '';
-        document.getElementById('entry-expense-body').innerHTML = '';
-        document.getElementById('entry-transfer-body').innerHTML = '';
-        entryIncomeCount = 0;
-        entryExpenseCount = 0;
-        entryTransferCount = 0;
-        for (var i = 0; i < 3; i++) addEntryRow('income');
-        for (var i = 0; i < 3; i++) addEntryRow('expense');
-        for (var i = 0; i < 3; i++) addEntryRow('transfer');
-        switchEntryTab('income');
         // 刷新仪表盘
         if (currentPage === 'dashboard') loadDashboard();
     } else {
@@ -2311,15 +2307,28 @@ async function openVoucherAuditModal(vid) {
     });
     document.getElementById('voucher-audit-preview').innerHTML = html;
 
-    // 加载银行下拉
+    // v8.3.1: 加载银行下拉（支持调拨凭证双银行选择）
     var bankRes = await api('/api/bank-accounts/');
-    var select = document.getElementById('audit-bank-select');
+    var activeBanks = [];
     if (bankRes.code === 200) {
-        var activeBanks = bankRes.data.filter(function(b) { return b.is_active; });
-        select.innerHTML = '<option value="">使用默认账号</option>' + activeBanks.map(function(b) {
-            var defaultMark = b.is_default ? ' ★默认' : '';
-            return '<option value="' + b.id + '">' + b.account_name + defaultMark + '</option>';
-        }).join('');
+        activeBanks = bankRes.data.filter(function(b) { return b.is_active; });
+    }
+    var bankOptions = activeBanks.map(function(b) {
+        var defaultMark = b.is_default ? ' ★默认' : '';
+        return '<option value="' + b.id + '">' + b.account_name + defaultMark + '</option>';
+    }).join('');
+
+    if (v.source_type === 'transfer') {
+        // 调拨凭证：显示双银行选择
+        document.getElementById('audit-bank-single').classList.add('hidden');
+        document.getElementById('audit-bank-double').classList.remove('hidden');
+        document.getElementById('audit-bank-debit').innerHTML = '<option value="">请选择转入银行</option>' + bankOptions;
+        document.getElementById('audit-bank-credit').innerHTML = '<option value="">请选择转出银行</option>' + bankOptions;
+    } else {
+        // 普通凭证：显示单银行选择
+        document.getElementById('audit-bank-single').classList.remove('hidden');
+        document.getElementById('audit-bank-double').classList.add('hidden');
+        document.getElementById('audit-bank-select').innerHTML = '<option value="">使用默认账号</option>' + bankOptions;
     }
 
     document.getElementById('voucher-audit-modal').classList.remove('hidden');
@@ -2332,10 +2341,25 @@ function closeVoucherAuditModal() {
 
 async function confirmVoucherAudit() {
     if (!voucherAuditId) return;
-    var bankId = document.getElementById('audit-bank-select').value;
+    var isTransfer = !document.getElementById('audit-bank-double').classList.contains('hidden');
+    var body;
+    if (isTransfer) {
+        // v8.3.1: 调拨凭证需要指定借方和贷方银行
+        var debitBank = document.getElementById('audit-bank-debit').value;
+        var creditBank = document.getElementById('audit-bank-credit').value;
+        if (!debitBank) { alert('请选择借方银行（转入账户）'); return; }
+        if (!creditBank) { alert('请选择贷方银行（转出账户）'); return; }
+        body = JSON.stringify({
+            debit_bank_id: parseInt(debitBank),
+            credit_bank_id: parseInt(creditBank)
+        });
+    } else {
+        var bankId = document.getElementById('audit-bank-select').value;
+        body = JSON.stringify({ bank_account_id: bankId ? parseInt(bankId) : null });
+    }
     var res = await api('/api/vouchers/' + voucherAuditId + '/audit', {
         method: 'POST',
-        body: JSON.stringify({ bank_account_id: bankId ? parseInt(bankId) : null }),
+        body: body,
     });
     if (res.code === 200) {
         closeVoucherAuditModal();
@@ -2388,10 +2412,11 @@ async function previewVoucher(vid) {
         var isDebit = e.direction === 'debit';
         var amount = e.amount || 0;
         if (isDebit) totalDebit += amount; else totalCredit += amount;
-        // 银行名：已审核显示具体银行，未审核显示"待定"
+        // v8.3.1: 显示银行名（已审核）或待定（未审核）
         var bankDisplay = '';
         if (e.bank_account_id) {
-            bankDisplay = e.bank_name ? '（' + e.bank_name + '）' : '（银行' + e.bank_account_id + '）';
+            var bname = e.bank_name || e.subject_name;
+            bankDisplay = '（' + bname + '）';
         } else if (e.subject_l1_code === '1002') {
             bankDisplay = '（<span class="text-amber-600">待定</span>）';
         }

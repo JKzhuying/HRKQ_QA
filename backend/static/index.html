@@ -73,7 +73,7 @@
                 </a>
             </nav>
             <div class="p-4 border-t border-slate-700">
-                <p class="text-xs text-slate-500 text-center">牙科财务管理系统 v8.3.1</p>
+                <p class="text-xs text-slate-500 text-center">牙科财务管理系统 v8.3.2</p>
             </div>
         </aside>
 
@@ -376,7 +376,7 @@
                     <button onclick="saveAllEntries()" class="group relative flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all text-sm font-medium overflow-hidden">
                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
                         <svg class="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        <span class="relative z-10">保存所有</span>
+                        <span class="relative z-10">保存</span>
                     </button>
                 </div>
             </div>
@@ -678,11 +678,27 @@
                     </div>
                     <div class="p-6">
                         <div id="voucher-audit-preview" class="mb-4 p-4 bg-gray-50 rounded-lg text-sm space-y-2"></div>
-                        <div class="mb-4">
+                        <!-- 普通凭证：单个银行选择 -->
+                        <div id="audit-bank-single" class="mb-4">
                             <label class="block text-sm text-gray-600 mb-2">选择银行账号（不选则使用默认）</label>
                             <select id="audit-bank-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                                 <option value="">使用默认账号</option>
                             </select>
+                        </div>
+                        <!-- v8.3.1: 调拨凭证：借方+贷方双银行选择 -->
+                        <div id="audit-bank-double" class="mb-4 hidden space-y-3">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-2">借方银行（转入账户）<span class="text-red-400">*</span></label>
+                                <select id="audit-bank-debit" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="">请选择转入银行</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-2">贷方银行（转出账户）<span class="text-red-400">*</span></label>
+                                <select id="audit-bank-credit" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="">请选择转出银行</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="flex items-center justify-end gap-3">
                             <button onclick="closeVoucherAuditModal()" class="px-4 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm">取消</button>

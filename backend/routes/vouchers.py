@@ -237,9 +237,8 @@ def get_voucher_detail(vid):
 
 @vouchers_bp.route('/<int:vid>/audit', methods=['POST'])
 def audit_voucher(vid):
-    """审核凭证：选择银行账号"""
+    """审核凭证：选择银行账号 - v8.3.2 支持调拨凭证双银行选择"""
     data = request.get_json()
-    bank_id = data.get('bank_account_id')
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -254,44 +253,91 @@ def audit_voucher(vid):
         conn.close()
         return jsonify({'code': 400, 'message': '凭证已审核'}), 400
 
-    # 确定银行
-    if not bank_id:
-        cursor.execute('SELECT id FROM bank_accounts WHERE is_default = 1 AND is_active = 1')
-        row = cursor.fetchone()
-        bank_id = row['id'] if row else None
+    # ===== v8.3.2: 调拨凭证需要分别指定借方和贷方银行 =====
+    if v['source_type'] == 'transfer':
+        debit_bank_id = data.get('debit_bank_id')
+        credit_bank_id = data.get('credit_bank_id')
 
-    if not bank_id:
-        conn.close()
-        return jsonify({'code': 400, 'message': '没有可用的银行账号，请先设置'}), 400
+        if not debit_bank_id:
+            conn.close()
+            return jsonify({'code': 400, 'message': '请选择借方银行（转入账户）'}), 400
+        if not credit_bank_id:
+            conn.close()
+            return jsonify({'code': 400, 'message': '请选择贷方银行（转出账户）'}), 400
 
-    # 检查银行是否启用
-    cursor.execute('SELECT is_active FROM bank_accounts WHERE id = %s', (bank_id,))
-    bank = cursor.fetchone()
-    if not bank or not bank['is_active']:
-        conn.close()
-        return jsonify({'code': 400, 'message': '选择的银行账号已停用'}), 400
+        # 检查两个银行是否都启用
+        cursor.execute('SELECT id, is_active, l2_code, l2_name FROM bank_accounts WHERE id IN (%s, %s)',
+                       (debit_bank_id, credit_bank_id))
+        bank_rows = cursor.fetchall()
+        if len(bank_rows) != 2:
+            conn.close()
+            return jsonify({'code': 400, 'message': '选择的银行账号不存在'}), 400
+        for br in bank_rows:
+            if not br['is_active']:
+                conn.close()
+                return jsonify({'code': 400, 'message': f"银行账号 {br['l2_name'] or br['id']} 已停用"}), 400
 
-    # 更新银行存款分录行的银行账号
-    if v['source_type'] == 'income':
+        # 获取借方银行信息
+        cursor.execute('SELECT l2_code, l2_name FROM bank_accounts WHERE id = %s', (debit_bank_id,))
+        debit_bank = cursor.fetchone()
+        debit_l2_code = debit_bank['l2_code'] if debit_bank and debit_bank['l2_code'] else '1002.01'
+        debit_l2_name = debit_bank['l2_name'] if debit_bank and debit_bank['l2_name'] else '银行存款—对公账户'
+
+        # 获取贷方银行信息
+        cursor.execute('SELECT l2_code, l2_name FROM bank_accounts WHERE id = %s', (credit_bank_id,))
+        credit_bank = cursor.fetchone()
+        credit_l2_code = credit_bank['l2_code'] if credit_bank and credit_bank['l2_code'] else '1002.01'
+        credit_l2_name = credit_bank['l2_name'] if credit_bank and credit_bank['l2_name'] else '银行存款—对公账户'
+
+        # 更新借方分录（转入账户）
         cursor.execute('''
-            UPDATE voucher_entries SET bank_account_id = %s
+            UPDATE voucher_entries SET bank_account_id = %s, subject_l2_code = %s, subject_name = %s
             WHERE voucher_id = %s AND direction = 'debit' AND subject_l1_code = '1002'
-        ''', (bank_id, vid))
-    elif v['source_type'] == 'transfer':
-        # v8.3.1: 调拨凭证 - 更新两条银行存款分录的银行账号
+        ''', (debit_bank_id, debit_l2_code, debit_l2_name, vid))
+
+        # 更新贷方分录（转出账户）
         cursor.execute('''
-            UPDATE voucher_entries SET bank_account_id = %s
-            WHERE voucher_id = %s AND direction = 'debit' AND subject_l1_code = '1002'
-        ''', (bank_id, vid))
-        cursor.execute('''
-            UPDATE voucher_entries SET bank_account_id = %s
+            UPDATE voucher_entries SET bank_account_id = %s, subject_l2_code = %s, subject_name = %s
             WHERE voucher_id = %s AND direction = 'credit' AND subject_l1_code = '1002'
-        ''', (bank_id, vid))
+        ''', (credit_bank_id, credit_l2_code, credit_l2_name, vid))
+
     else:
-        cursor.execute('''
-            UPDATE voucher_entries SET bank_account_id = %s
-            WHERE voucher_id = %s AND direction = 'credit' AND subject_l1_code = '1002'
-        ''', (bank_id, vid))
+        # ===== 普通凭证（收入/支出）：使用单一银行 =====
+        bank_id = data.get('bank_account_id')
+
+        # 确定银行
+        if not bank_id:
+            cursor.execute('SELECT id FROM bank_accounts WHERE is_default = 1 AND is_active = 1')
+            row = cursor.fetchone()
+            bank_id = row['id'] if row else None
+
+        if not bank_id:
+            conn.close()
+            return jsonify({'code': 400, 'message': '没有可用的银行账号，请先设置'}), 400
+
+        # 检查银行是否启用
+        cursor.execute('SELECT is_active FROM bank_accounts WHERE id = %s', (bank_id,))
+        bank = cursor.fetchone()
+        if not bank or not bank['is_active']:
+            conn.close()
+            return jsonify({'code': 400, 'message': '选择的银行账号已停用'}), 400
+
+        # 更新银行存款分录行的银行账号、二级科目代码和名称
+        cursor.execute('SELECT l2_code, l2_name FROM bank_accounts WHERE id = %s', (bank_id,))
+        bank_row = cursor.fetchone()
+        l2_code = bank_row['l2_code'] if bank_row and bank_row['l2_code'] else '1002.01'
+        l2_name = bank_row['l2_name'] if bank_row and bank_row['l2_name'] else '银行存款—对公账户'
+
+        if v['source_type'] == 'income':
+            cursor.execute('''
+                UPDATE voucher_entries SET bank_account_id = %s, subject_l2_code = %s, subject_name = %s
+                WHERE voucher_id = %s AND direction = 'debit' AND subject_l1_code = '1002'
+            ''', (bank_id, l2_code, l2_name, vid))
+        else:
+            cursor.execute('''
+                UPDATE voucher_entries SET bank_account_id = %s, subject_l2_code = %s, subject_name = %s
+                WHERE voucher_id = %s AND direction = 'credit' AND subject_l1_code = '1002'
+            ''', (bank_id, l2_code, l2_name, vid))
 
     # 更新凭证状态
     cursor.execute('''

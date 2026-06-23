@@ -1,16 +1,22 @@
 import pymysql
 from pymysql.cursors import DictCursor
 
-DB_CONFIG = {
-    'host': 'localhost', 'port': 3306,
-    'user': 'hrkq', 'password': 'Qaz1121zz',
-    'database': 'dental_finance', 'charset': 'utf8mb4',
-    'cursorclass': DictCursor,
-}
-
 
 def get_db_connection():
-    return pymysql.connect(**DB_CONFIG)
+    """v9.0: 从加密配置动态读取数据库连接信息"""
+    from utils.config_manager import get_db_config
+    config = get_db_config()
+    if not config:
+        raise RuntimeError('Database not configured. Please complete setup first.')
+    config['cursorclass'] = DictCursor
+    return pymysql.connect(**config)
+
+
+def _db_name():
+    """获取当前配置的数据库名（用于 information_schema 查询）"""
+    from utils.config_manager import get_db_config
+    cfg = get_db_config()
+    return cfg['database'] if cfg else 'dental_finance'
 
 
 # ========== 编号生成工具 v8.0 ==========
@@ -56,7 +62,7 @@ def _table_exists(cursor, table_name):
     cursor.execute('''
         SELECT COUNT(*) as cnt FROM information_schema.tables
         WHERE table_schema = %s AND table_name = %s
-    ''', (DB_CONFIG['database'], table_name))
+    ''', (_db_name(), table_name))
     return cursor.fetchone()['cnt'] > 0
 
 
@@ -64,7 +70,7 @@ def _col_exists(cursor, table_name, col_name):
     cursor.execute('''
         SELECT COUNT(*) as cnt FROM information_schema.columns
         WHERE table_schema = %s AND table_name = %s AND column_name = %s
-    ''', (DB_CONFIG['database'], table_name, col_name))
+    ''', (_db_name(), table_name, col_name))
     return cursor.fetchone()['cnt'] > 0
 
 
@@ -111,11 +117,26 @@ def init_database():
             account_name VARCHAR(100) NOT NULL,
             bank_name VARCHAR(100),
             account_no VARCHAR(30),
+            l2_code VARCHAR(15) COMMENT '对应二级科目代码',
+            l2_name VARCHAR(50) COMMENT '对应二级科目名称',
             is_active TINYINT DEFAULT 1,
             is_default TINYINT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    # v8.3.1: 兼容旧表添加新字段
+    for new_col in ["l2_code VARCHAR(15)", "l2_name VARCHAR(50)"]:
+        try:
+            cursor.execute(f'ALTER TABLE bank_accounts ADD COLUMN {new_col}')
+        except Exception:
+            pass  # 字段已存在
+    # v8.3.1: 为旧数据补充分配 l2_code
+    cursor.execute('SELECT id, account_name FROM bank_accounts WHERE l2_code IS NULL OR l2_code = ""')
+    for row in cursor.fetchall():
+        l2_code = f"1002.{row['id']:02d}"
+        l2_name = f"银行存款—{row['account_name']}"
+        cursor.execute('UPDATE bank_accounts SET l2_code = %s, l2_name = %s WHERE id = %s',
+                       (l2_code, l2_name, row['id']))
     if _row_count(cursor, 'bank_accounts') == 0:
         cursor.execute('''
             INSERT INTO bank_accounts (account_name, is_active, is_default) VALUES (%s, 1, 1)
@@ -194,11 +215,43 @@ def init_database():
         )
     ''')
 
-    # ========== 6. 收支表增加 link_no v8.0 ==========
-    # income_records
+    # ========== 6. 收支表 v8.0 / v9.0 fix ==========
+    # v9.0: 补充 income_records 和 expense_records 建表语句（旧版本缺失）
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS income_records (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            trans_date DATE NOT NULL,
+            counterparty VARCHAR(200),
+            category VARCHAR(50),
+            item_name VARCHAR(200),
+            amount_receivable DECIMAL(12,2) DEFAULT 0,
+            amount_real DECIMAL(12,2) DEFAULT 0,
+            payment_method VARCHAR(20) DEFAULT 'cash',
+            remark TEXT,
+            source_file VARCHAR(200),
+            link_no VARCHAR(20) UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS expense_records (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            trans_date DATE NOT NULL,
+            counterparty VARCHAR(200),
+            category VARCHAR(50),
+            item_name VARCHAR(200),
+            amount_receivable DECIMAL(12,2) DEFAULT 0,
+            amount_real DECIMAL(12,2) DEFAULT 0,
+            payment_method VARCHAR(20) DEFAULT 'cash',
+            remark TEXT,
+            source_file VARCHAR(200),
+            link_no VARCHAR(20) UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    # v8.0 兼容：为旧表补充 link_no 字段
     if not _col_exists(cursor, 'income_records', 'link_no'):
         cursor.execute('ALTER TABLE income_records ADD COLUMN link_no VARCHAR(20) UNIQUE')
-    # expense_records
     if not _col_exists(cursor, 'expense_records', 'link_no'):
         cursor.execute('ALTER TABLE expense_records ADD COLUMN link_no VARCHAR(20) UNIQUE')
 
@@ -209,7 +262,7 @@ def init_database():
             SELECT COUNT(*) as cnt FROM information_schema.KEY_COLUMN_USAGE
             WHERE table_schema = %s AND table_name = 'vouchers'
             AND referenced_table_name IS NOT NULL
-        ''', (DB_CONFIG['database'],))
+        ''', (_db_name(),))
         if cursor.fetchone()['cnt'] > 0:
             cursor.execute('DROP TABLE voucher_entries')
             cursor.execute('DROP TABLE vouchers')
