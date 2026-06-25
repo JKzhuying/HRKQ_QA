@@ -4,3 +4,4 @@ openpyxl==3.1.2
 Werkzeug==3.0.3
 PyMySQL==1.1.0
 cryptography==42.0.7
+APScheduler==3.10.4

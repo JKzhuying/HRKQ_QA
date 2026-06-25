@@ -2170,6 +2170,7 @@ function renderBanks(list) {
                 '<span class="font-medium text-gray-900 text-sm">' + b.account_name + '</span>' + isDefault + statusBadge + accountInfo + bankInfo +
             '</div>' +
             '<div class="flex items-center gap-1">' +
+                '<button onclick="openEditBank(' + b.id + ', \'' + (b.account_name || '').replace(/'/g, "\\'") + '\', \'' + (b.bank_name || '').replace(/'/g, "\\'") + '\', \'' + (b.account_no || '') + '\')" class="p-1 text-blue-500 hover:bg-blue-50 rounded text-xs" title="编辑">编</button>' +
                 (b.is_default ? '' : '<button onclick="setDefaultBank(' + b.id + ')" class="p-1 text-amber-600 hover:bg-amber-50 rounded text-xs" title="设为默认">★</button>') +
                 '<button onclick="toggleBank(' + b.id + ')" class="p-1 text-gray-500 hover:bg-gray-100 rounded text-xs">' + (b.is_active ? '停' : '启') + '</button>' +
                 '<button onclick="deleteBank(' + b.id + ')" class="p-1 text-red-500 hover:bg-red-50 rounded text-xs">删</button>' +
@@ -2206,6 +2207,43 @@ async function setDefaultBank(id) {
 async function toggleBank(id) {
     var res = await api('/api/bank-accounts/' + id + '/toggle', { method: 'POST' });
     if (res.code === 200) loadBanks(); else alert(res.message);
+}
+
+// v8.5: 银行账号编辑
+var _currentEditBankId = null;
+
+function openEditBank(id, name, branch, accountNo) {
+    _currentEditBankId = id;
+    document.getElementById('edit-bank-id').value = id;
+    document.getElementById('edit-bank-name').value = name || '';
+    document.getElementById('edit-bank-branch').value = branch || '';
+    document.getElementById('edit-bank-no').value = accountNo || '';
+    document.getElementById('edit-bank-modal').classList.remove('hidden');
+}
+
+function closeEditBankModal() {
+    document.getElementById('edit-bank-modal').classList.add('hidden');
+    _currentEditBankId = null;
+}
+
+async function updateBank() {
+    if (!_currentEditBankId) return;
+    var name = document.getElementById('edit-bank-name').value.trim();
+    if (!name) { alert('请输入账户名称'); return; }
+    var res = await api('/api/bank-accounts/' + _currentEditBankId, {
+        method: 'PUT',
+        body: JSON.stringify({
+            account_name: name,
+            bank_name: document.getElementById('edit-bank-branch').value,
+            account_no: document.getElementById('edit-bank-no').value,
+        }),
+    });
+    if (res.code === 200) {
+        closeEditBankModal();
+        loadBanks();
+    } else {
+        alert(res.message || '更新失败');
+    }
 }
 
 // ==================== 凭证管理 v8.0 ====================

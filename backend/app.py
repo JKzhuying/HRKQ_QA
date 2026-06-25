@@ -47,15 +47,10 @@ app.register_blueprint(auto_backup_bp, url_prefix='/api/auto-backup')
 app.register_blueprint(transfers_bp, url_prefix='/api/transfers')
 app.register_blueprint(accounting_bp, url_prefix='/api/accounting')
 
-# v8.1 自动备份：首次请求时启动
-_auto_backup_started = False
-
 
 @app.before_request
 def _global_before_request():
-    global _auto_backup_started
-
-    # 1. 未安装时拦截业务 API（仅 /api/* 排除 /api/setup/* 和 /api/health）
+    # 未安装时拦截业务 API（仅 /api/* 排除 /api/setup/* 和 /api/health）
     if not _is_installed():
         path = request.path
         if path.startswith('/api/') and not path.startswith('/api/setup/') and path != '/api/health':
@@ -65,14 +60,6 @@ def _global_before_request():
                 'data': {'setup_required': True}
             }), 503
         return  # 非 API 请求（如 /, /css, /js）允许通过
-
-    # 2. 已安装：启动自动备份
-    if not _auto_backup_started:
-        _auto_backup_started = True
-        try:
-            start_auto_backup_scheduler()
-        except Exception as e:
-            print('[AutoBackup] 启动失败:', e)
 
 
 # ==================== 动态路由 ====================
@@ -114,4 +101,9 @@ if __name__ == '__main__':
             init_database()
         except Exception as e:
             print('[APP] Database init warning:', e)
+        # v8.5: 应用启动时立即启动自动备份（不依赖HTTP请求）
+        try:
+            start_auto_backup_scheduler()
+        except Exception as e:
+            print('[AutoBackup] 启动时初始化失败:', e)
     app.run(host='0.0.0.0', port=5000, debug=True)
