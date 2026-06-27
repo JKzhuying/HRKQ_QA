@@ -71,6 +71,27 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     <span class="font-medium">系统设置</span>
                 </a>
+                <!-- v8.5 库存管理 -->
+                <div class="inventory-nav-group">
+                    <a href="#" data-page="inventory" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        <span class="font-medium">库存管理</span>
+                    </a>
+                    <div class="inventory-submenu hidden pl-8 space-y-1">
+                        <a href="#" data-page="inventory-entry" class="nav-subitem block px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                            入库登记
+                        </a>
+                        <a href="#" data-page="inventory-history" class="nav-subitem block px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                            入库历史
+                        </a>
+                        <a href="#" data-page="inventory-warnings" class="nav-subitem block px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                            库存预警
+                        </a>
+                        <a href="#" data-page="inventory-suppliers" class="nav-subitem block px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                            供应商
+                        </a>
+                    </div>
+                </div>
             </nav>
             <div class="p-4 border-t border-slate-700">
                 <p class="text-xs text-slate-500 text-center">牙科财务管理系统 v8.3.2</p>
@@ -1180,6 +1201,422 @@
             </div>
         </div>
         <!-- 期初余额录入弹窗结束 -->
+
+            <!-- ==================== v8.5 库存管理页面 ==================== -->
+            <!-- 1. 入库登记 -->
+            <div id="page-inventory-entry" class="page-content space-y-6 hidden">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">入库登记</h2>
+                    <p class="text-sm text-gray-500 mt-1">上传出库单照片作为凭证（手动录入商品信息）</p>
+                </div>
+                <!-- 批次信息 -->
+                <div class="bg-white rounded-xl shadow-sm border p-6 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">供应商</label>
+                            <div class="flex gap-2">
+                                <select id="inv-supplier" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="">选择供应商</option>
+                                </select>
+                                <button onclick="openSupplierModal()" class="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm">+</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">入库日期</label>
+                            <input type="date" id="inv-date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                            <input type="text" id="inv-remark" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="可选">
+                        </div>
+                    </div>
+                </div>
+                <!-- 照片上传 -->
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">出库单照片</h3>
+                    <div id="inv-photo-upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors">
+                        <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <p class="text-gray-500 mb-2">点击上传或拖拽照片到此处</p>
+                        <p class="text-xs text-gray-400">支持 JPG / PNG</p>
+                        <input type="file" id="inv-photo-input" class="hidden" accept="image/*">
+                    </div>
+                    <!-- 照片预览 + 框选区域 -->
+                    <div id="inv-photo-preview-area" class="hidden mt-4 relative">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-500">照片仅供参考，请在下方手动录入商品信息</span>
+                            <button onclick="removeInventoryPhoto()" class="text-red-500 text-sm hover:text-red-700">移除照片</button>
+                        </div>
+                        <div class="relative border rounded-lg" id="inv-photo-container" style="max-height: 500px; overflow: auto;">
+                            <img id="inv-preview-img" src="" class="max-w-none" style="max-height: 500px; cursor: crosshair;">
+                            <div id="inv-selection-rect" class="absolute border-2 border-primary bg-primary/10 hidden" style="pointer-events: none;"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 商品明细 -->
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">商品明细</h3>
+                        <span class="text-sm text-gray-500">在下方表格中手动录入商品信息</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-gray-500 border-b">
+                                    <th class="px-2 py-2 w-24">大类</th>
+                                    <th class="px-2 py-2 min-w-[150px]">名称 *</th>
+                                    <th class="px-2 py-2 min-w-[100px]">规格</th>
+                                    <th class="px-2 py-2 w-20">数量 *</th>
+                                    <th class="px-2 py-2 w-20">单位 *</th>
+                                    <th class="px-2 py-2 w-28">批号</th>
+                                    <th class="px-2 py-2 w-28">生产日期</th>
+                                    <th class="px-2 py-2 w-28">有效期</th>
+                                    <th class="px-2 py-2 min-w-[120px]">生产企业</th>
+                                    <th class="px-2 py-2 w-28">许可证</th>
+                                    <th class="px-2 py-2 w-24">价格(不含税)</th>
+                                    <th class="px-2 py-2 w-20">税费</th>
+                                    <th class="px-2 py-2 w-24">总价 *</th>
+                                    <th class="px-2 py-2 w-16">合格</th>
+                                    <th class="px-2 py-2 w-8"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="inv-items-body">
+                                <!-- 动态添加行 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex items-center justify-between mt-4">
+                        <button onclick="addInventoryRow()" class="flex items-center gap-1.5 px-4 py-2 text-primary hover:bg-emerald-50 rounded-lg transition-colors text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            添加新商品
+                        </button>
+                        <div class="flex gap-2">
+                            <button onclick="clearInventoryForm()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors text-sm">清空重置</button>
+                            <button onclick="submitInventory()" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium flex items-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                确认入库
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 入库历史 -->
+            <div id="page-inventory-history" class="page-content space-y-6 hidden">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">入库历史</h2>
+                    <p class="text-sm text-gray-500 mt-1">查询和管理历史入库记录</p>
+                </div>
+                <!-- 筛选 -->
+                <div class="bg-white rounded-xl shadow-sm border p-4">
+                    <div class="flex flex-wrap items-end gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">关键词</label>
+                            <input type="text" id="invh-keyword" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-40" placeholder="名称/批号">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">供应商</label>
+                            <select id="invh-supplier" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-32">
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">日期</label>
+                            <div class="flex items-center gap-1">
+                                <input type="date" id="invh-date-from" class="px-2 py-2 border border-gray-300 rounded-lg text-sm w-32">
+                                <span class="text-gray-400">~</span>
+                                <input type="date" id="invh-date-to" class="px-2 py-2 border border-gray-300 rounded-lg text-sm w-32">
+                            </div>
+                        </div>
+                        <button onclick="loadInventoryHistory()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            搜索
+                        </button>
+                    </div>
+                </div>
+                <!-- 列表 -->
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                                <th class="px-4 py-3 text-left">日期</th>
+                                <th class="px-4 py-3 text-left">批次号</th>
+                                <th class="px-4 py-3 text-left">供应商</th>
+                                <th class="px-4 py-3 text-left">名称</th>
+                                <th class="px-4 py-3 text-right">数量</th>
+                                <th class="px-4 py-3 text-center">生产日期</th>
+                                <th class="px-4 py-3 text-center">有效期</th>
+                                <th class="px-4 py-3 text-center">合格状态</th>
+                                <th class="px-4 py-3 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invh-list-body" class="divide-y"></tbody>
+                    </table>
+                    <div id="invh-pagination" class="flex items-center justify-between px-4 py-3 border-t bg-gray-50"></div>
+                </div>
+            </div>
+
+            <!-- 3. 库存预警 -->
+            <div id="page-inventory-warnings" class="page-content space-y-6 hidden">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">库存预警</h2>
+                    <p class="text-sm text-gray-500 mt-1">有效期到期预警</p>
+                </div>
+                <!-- 筛选标签 -->
+                <div class="flex gap-2">
+                    <button onclick="loadInventoryWarnings('all')" class="invw-filter px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white" data-filter="all">全部</button>
+                    <button onclick="loadInventoryWarnings('expired')" class="invw-filter px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-filter="expired">已过期</button>
+                    <button onclick="loadInventoryWarnings('critical')" class="invw-filter px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-filter="critical">30天内</button>
+                    <button onclick="loadInventoryWarnings('warning')" class="invw-filter px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-filter="warning">90天内</button>
+                </div>
+                <!-- 列表 -->
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                                <th class="px-4 py-3 text-left">名称</th>
+                                <th class="px-4 py-3 text-left">批号</th>
+                                <th class="px-4 py-3 text-left">规格</th>
+                                <th class="px-4 py-3 text-right">库存量</th>
+                                <th class="px-4 py-3 text-center">生产日期</th>
+                                <th class="px-4 py-3 text-center">有效期</th>
+                                <th class="px-4 py-3 text-right">剩余天数</th>
+                                <th class="px-4 py-3 text-center">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invw-list-body" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 4. 供应商管理 -->
+            <div id="page-inventory-suppliers" class="page-content space-y-6 hidden">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">供应商管理</h2>
+                    <p class="text-sm text-gray-500 mt-1">维护供应商信息和证照</p>
+                </div>
+                <!-- 添加/搜索 -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <input type="text" id="invs-search" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-60" placeholder="搜索供应商名称" onkeydown="if(event.key==='Enter')loadSuppliers()">
+                        <button onclick="loadSuppliers()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm">搜索</button>
+                    </div>
+                    <button onclick="openSupplierModal()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        新增供应商
+                    </button>
+                </div>
+                <!-- 列表 -->
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                                <th class="px-4 py-3 text-left">名称</th>
+                                <th class="px-4 py-3 text-left">联系人</th>
+                                <th class="px-4 py-3 text-left">电话</th>
+                                <th class="px-4 py-3 text-left">营业执照号</th>
+                                <th class="px-4 py-3 text-center">证照</th>
+                                <th class="px-4 py-3 text-center">状态</th>
+                                <th class="px-4 py-3 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invs-list-body" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 供应商编辑弹窗 -->
+            <div id="supplier-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900" id="supplier-modal-title">新增供应商</h3>
+                        <button onclick="closeSupplierModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <input type="hidden" id="supplier-id">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">供应商名称 *</label>
+                            <input type="text" id="supplier-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">联系人</label>
+                                <input type="text" id="supplier-contact" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">电话</label>
+                                <input type="text" id="supplier-phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">地址</label>
+                            <input type="text" id="supplier-address" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">营业执照号</label>
+                            <input type="text" id="supplier-license-no" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                            <textarea id="supplier-remark" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" rows="2"></textarea>
+                        </div>
+                        <!-- 证照上传（编辑时显示） -->
+                        <div id="supplier-photo-section" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">证照</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="border rounded-lg p-3 text-center">
+                                    <p class="text-xs text-gray-500 mb-2">营业执照</p>
+                                    <div id="supplier-photo-business" class="space-y-2">
+                                        <button onclick="uploadSupplierPhoto('营业执照')" class="w-full px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200">上传</button>
+                                    </div>
+                                </div>
+                                <div class="border rounded-lg p-3 text-center">
+                                    <p class="text-xs text-gray-500 mb-2">医疗器械许可证</p>
+                                    <div id="supplier-photo-medical" class="space-y-2">
+                                        <button onclick="uploadSupplierPhoto('医疗器械经营许可证')" class="w-full px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200">上传</button>
+                                    </div>
+                                </div>
+                                <div class="border rounded-lg p-3 text-center">
+                                    <p class="text-xs text-gray-500 mb-2">其他</p>
+                                    <div id="supplier-photo-other" class="space-y-2">
+                                        <button onclick="uploadSupplierPhoto('其他')" class="w-full px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200">上传</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 mt-6">
+                        <button onclick="closeSupplierModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
+                        <button onclick="saveSupplier()" class="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark font-medium">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 供应商证照查看弹窗 -->
+            <div id="supplier-photo-view-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900">供应商证照</h3>
+                        <button onclick="document.getElementById('supplier-photo-view-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div id="supplier-photo-view-list" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- 入库详情弹窗 -->
+            <div id="inventory-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900">入库详情</h3>
+                        <button onclick="closeInventoryDetail()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div id="inventory-detail-content" class="space-y-3 text-sm"></div>
+                    <div class="flex gap-2 mt-4 pt-4 border-t">
+                        <button id="inv-detail-edit-btn" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium">编辑</button>
+                        <button onclick="closeInventoryDetail()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm">关闭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 入库编辑弹窗 -->
+            <div id="inventory-edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900">编辑入库记录</h3>
+                        <button onclick="closeInventoryEdit()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <input type="hidden" id="inv-edit-id">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">商品名称 *</label>
+                                <input type="text" id="inv-edit-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">大类</label>
+                                <select id="inv-edit-cat" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="耗材">耗材</option><option value="药品">药品</option><option value="器械">器械</option><option value="设备">设备</option><option value="消毒用品">消毒用品</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">规格</label>
+                                <input type="text" id="inv-edit-spec" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">数量 *</label>
+                                <input type="number" id="inv-edit-qty" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" step="0.01">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">单位 *</label>
+                                <select id="inv-edit-unit" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="箱">箱</option><option value="盒">盒</option><option value="支">支</option><option value="瓶">瓶</option><option value="袋">袋</option><option value="套">套</option><option value="个">个</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">批号</label>
+                                <input type="text" id="inv-edit-batch" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">生产日期</label>
+                                <input type="date" id="inv-edit-prod-date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">有效期</label>
+                                <input type="date" id="inv-edit-expiry" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">生产企业</label>
+                                <input type="text" id="inv-edit-mfr" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">许可证</label>
+                                <input type="text" id="inv-edit-license" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">价格(不含税)</label>
+                                <input type="number" id="inv-edit-price" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" step="0.0001" onblur="calcInvEditTax()">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">总价 *</label>
+                                <input type="number" id="inv-edit-total" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" step="0.0001" onblur="calcInvEditTax()">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">税费</label>
+                                <input type="text" id="inv-edit-tax" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50" readonly>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">供应商</label>
+                            <select id="inv-edit-supplier" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="">无</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">备注</label>
+                            <textarea id="inv-edit-remark" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" rows="2"></textarea>
+                        </div>
+                        <div class="flex gap-2 pt-2">
+                            <button onclick="submitInventoryEdit()" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium">保存</button>
+                            <button onclick="closeInventoryEdit()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm">取消</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
         </main>
     </div>

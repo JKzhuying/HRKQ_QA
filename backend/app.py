@@ -36,6 +36,7 @@ from routes.vouchers import vouchers_bp
 from routes.auto_backup import auto_backup_bp, start_auto_backup_scheduler
 from routes.transfers import transfers_bp
 from routes.accounting import accounting_bp
+from routes.inventory import inventory_bp
 
 app.register_blueprint(settings_bp, url_prefix='/api/settings')
 app.register_blueprint(transactions_bp, url_prefix='/api/transactions')
@@ -46,6 +47,7 @@ app.register_blueprint(vouchers_bp, url_prefix='/api/vouchers')
 app.register_blueprint(auto_backup_bp, url_prefix='/api/auto-backup')
 app.register_blueprint(transfers_bp, url_prefix='/api/transfers')
 app.register_blueprint(accounting_bp, url_prefix='/api/accounting')
+app.register_blueprint(inventory_bp, url_prefix='/api/inventory')
 
 
 @app.before_request
@@ -84,6 +86,13 @@ def serve_js(path):
     return send_from_directory('static/js', path)
 
 
+# v8.5: 提供上传文件访问（库存照片、供应商证照）
+@app.route('/uploads/<path:path>')
+def serve_uploads(path):
+    """提供 uploads 目录下的文件访问"""
+    return send_from_directory('uploads', path)
+
+
 # 健康检查
 @app.route('/api/health')
 def health_check():
@@ -95,15 +104,19 @@ def health_check():
     }
 
 
+# v8.5: 应用启动时初始化数据库表（uWSGI模式下也执行）
+if _is_installed():
+    try:
+        init_database()
+        print('[APP] Database initialized')
+    except Exception as e:
+        print('[APP] Database init warning:', e)
+    # v8.5: 应用启动时立即启动自动备份（不依赖HTTP请求）
+    try:
+        start_auto_backup_scheduler()
+    except Exception as e:
+        print('[AutoBackup] 启动时初始化失败:', e)
+
+
 if __name__ == '__main__':
-    if _is_installed():
-        try:
-            init_database()
-        except Exception as e:
-            print('[APP] Database init warning:', e)
-        # v8.5: 应用启动时立即启动自动备份（不依赖HTTP请求）
-        try:
-            start_auto_backup_scheduler()
-        except Exception as e:
-            print('[AutoBackup] 启动时初始化失败:', e)
     app.run(host='0.0.0.0', port=5000, debug=True)

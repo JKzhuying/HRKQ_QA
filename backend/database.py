@@ -467,6 +467,92 @@ def init_database():
             (c, n, cat, d)
         )
 
+    # ========== 15. 库存管理表 v8.5 ==========
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_photos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            original_name VARCHAR(255),
+            storage_path VARCHAR(500) NOT NULL,
+            file_size INT,
+            upload_method ENUM('手机拍照','本地上传','扫描') DEFAULT '本地上传',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS suppliers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            contact_person VARCHAR(100),
+            phone VARCHAR(50),
+            address TEXT,
+            business_license_no VARCHAR(200),
+            status ENUM('启用','停用') DEFAULT '启用',
+            remark TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS supplier_photos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            supplier_id INT NOT NULL,
+            photo_type ENUM('营业执照','医疗器械经营许可证','其他') NOT NULL,
+            storage_path VARCHAR(500) NOT NULL,
+            file_size INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_records (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            category VARCHAR(50) NOT NULL DEFAULT '耗材',
+            name VARCHAR(200) NOT NULL,
+            specification VARCHAR(200),
+            quantity DECIMAL(10,2) NOT NULL,
+            unit VARCHAR(20) NOT NULL,
+            production_date DATE,
+            expiry_date DATE,
+            batch_no VARCHAR(50),
+            manufacturer VARCHAR(200),
+            manufacturer_license VARCHAR(100),
+            unit_price DECIMAL(12,4),
+            tax_amount DECIMAL(12,4),
+            total_price DECIMAL(12,4) NOT NULL,
+            is_qualified ENUM('合格','不合格','待检') DEFAULT '合格',
+            photo_id INT,
+            supplier_id INT,
+            batch_no_rk VARCHAR(50),
+            operator VARCHAR(50),
+            remark TEXT,
+            status ENUM('在库','已出库','报废') DEFAULT '在库',
+            current_stock DECIMAL(10,2) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            inventory_id INT,
+            action_type ENUM('入库','出库','盘点','报废') NOT NULL,
+            quantity DECIMAL(10,2),
+            operator VARCHAR(50),
+            remark TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_batch_counters (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            entry_date DATE NOT NULL UNIQUE,
+            counter INT NOT NULL DEFAULT 0
+        )
+    ''')
+
     conn.commit()
     conn.close()
     print('MySQL init done v8.5')

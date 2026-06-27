@@ -18,10 +18,12 @@ let querySortDir = 'asc'; // 'asc' | 'desc'
 
 // ==================== API 请求 ====================
 async function api(url, options = {}) {
-    const res = await fetch(url, {
-        headers: { 'Content-Type': 'application/json' },
-        ...options,
-    });
+    var opts = { ...options };
+    // 只在有body时设置Content-Type，避免DELETE等请求出错
+    if (opts.body && !opts.headers) {
+        opts.headers = { 'Content-Type': 'application/json' };
+    }
+    const res = await fetch(url, opts);
     return res.json();
 }
 
@@ -166,9 +168,27 @@ function showPage(page) {
     else if (page === 'entry') initEntryPage();
     else if (page === 'vouchers') loadVouchers('');
     else if (page === 'finance') { checkOpeningBalance(); loadFinanceL1(); loadFinanceL2(); loadFinanceMapping(); }
+    else if (page === 'inventory-entry') { loadSuppliersForSelect(); initInventoryEntryPage(); }
+    else if (page === 'inventory-history') { loadSuppliersForHistory(); loadInventoryHistory(); }
+    else if (page === 'inventory-warnings') loadInventoryWarnings('all');
+    else if (page === 'inventory-suppliers') loadSuppliers();
 }
 
-document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
+// v8.5: 库存管理子菜单切换
+document.querySelector('.inventory-nav-group').addEventListener('click', function(e) {
+    e.preventDefault();
+    var el = e.target.closest('.nav-item, .nav-subitem');
+    if (!el) return;
+    if (el.classList.contains('nav-item')) {
+        var submenu = this.querySelector('.inventory-submenu');
+        submenu.classList.toggle('hidden');
+        showPage('inventory-entry');
+    } else if (el.classList.contains('nav-subitem')) {
+        showPage(el.dataset.page);
+    }
+});
+
+document.querySelectorAll('.nav-item:not(.inventory-nav-group .nav-item), .mobile-nav-item').forEach(el => {
     el.addEventListener('click', (e) => {
         e.preventDefault();
         showPage(el.dataset.page);
@@ -2821,4 +2841,692 @@ async function importOpeningExcel() {
         }
     };
     input.click();
+}
+
+// ==================== 通用工具函数 v8.5 ====================
+
+function formatDateTime(dt) {
+    if (!dt || dt === 'null' || dt === 'None') return '-';
+    var d = new Date(dt);
+    if (isNaN(d.getTime())) return dt;
+    var year = d.getFullYear();
+    var month = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    var hour = String(d.getHours()).padStart(2, '0');
+    var min = String(d.getMinutes()).padStart(2, '0');
+    var sec = String(d.getSeconds()).padStart(2, '0');
+    return year + '年' + month + '月' + day + '日 ' + hour + ':' + min + ':' + sec;
+}
+
+function formatDate(dt) {
+    if (!dt || dt === 'null' || dt === 'None') return '-';
+    var d = new Date(dt);
+    if (isNaN(d.getTime())) return dt;
+    var year = d.getFullYear();
+    var month = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return year + '年' + month + '月' + day + '日';
+}
+
+// ==================== v8.5 库存管理 ====================
+
+var _invPhotoId = null;
+var _invCurrentField = null;
+var _invRowCount = 0;
+var _currentEditSupplierId = null;
+var _invhCurrentPage = 1;
+
+function initInventoryEntryPage() {
+    document.getElementById('inv-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('inv-items-body').innerHTML = '';
+    _invRowCount = 0;
+    addInventoryRow();
+    bindInventoryPhotoUpload();
+    bindInventoryPhotoSelection();
+}
+
+function loadSuppliersForSelect() {
+    api('/api/inventory/suppliers').then(function(res) {
+        if (res.code !== 200) return;
+        var sel = document.getElementById('inv-supplier');
+        if (!sel) return;
+        var html = '<option value="">选择供应商</option>';
+        res.data.forEach(function(s) { html += '<option value="' + s.id + '">' + s.name + '</option>'; });
+        sel.innerHTML = html;
+    }).catch(function(e) { console.log(e); });
+}
+
+function bindInventoryPhotoUpload() {
+    var uploadArea = document.getElementById('inv-photo-upload-area');
+    var fileInput = document.getElementById('inv-photo-input');
+    if (!uploadArea || !fileInput) return;
+    uploadArea.onclick = function() { fileInput.click(); };
+    fileInput.onchange = function() {
+        var file = fileInput.files[0];
+        if (!file) return;
+        var formData = new FormData();
+        formData.append('file', file);
+        fetch('/api/inventory/upload-photo', { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.code === 200) {
+                    _invPhotoId = res.data.photo_id;
+                    document.getElementById('inv-photo-upload-area').classList.add('hidden');
+                    document.getElementById('inv-photo-preview-area').classList.remove('hidden');
+                    var path = res.data.path;
+                    var parts = path.split('/');
+                    var fname = parts[parts.length - 1];
+                    document.getElementById('inv-preview-img').src = '/uploads/inventory/' + fname;
+                } else { alert(res.message || '上传失败'); }
+            }).catch(function(e) { alert('上传失败: ' + e.message); });
+    };
+}
+
+function removeInventoryPhoto() {
+    _invPhotoId = null;
+    document.getElementById('inv-photo-upload-area').classList.remove('hidden');
+    document.getElementById('inv-photo-preview-area').classList.add('hidden');
+    document.getElementById('inv-preview-img').src = '';
+    document.getElementById('inv-photo-input').value = '';
+}
+
+function bindInventoryPhotoSelection() {
+    // v8.6: 移除OCR框选功能，仅保留图片预览
+    var img = document.getElementById('inv-preview-img');
+    if (!img) return;
+    if (img._selectionBound) return;
+    img._selectionBound = true;
+    // 图片仅用于参考，手动录入信息
+}
+
+function onInvFieldFocus(input) {
+    if (_invCurrentField) _invCurrentField.classList.remove('ring-2', 'ring-blue-400');
+    _invCurrentField = input;
+    input.classList.add('ring-2', 'ring-blue-400');
+}
+
+function addInventoryRow() {
+    _invRowCount++;
+    var tbody = document.getElementById('inv-items-body');
+    var tr = document.createElement('tr');
+    tr.className = 'inv-item-row border-b';
+    tr.dataset.rowId = _invRowCount;
+
+    var catOpts = '<option value="耗材">耗材</option><option value="药品">药品</option><option value="器械">器械</option><option value="设备">设备</option><option value="消毒用品">消毒用品</option>';
+    var unitOpts = '<option value="箱">箱</option><option value="盒">盒</option><option value="支">支</option><option value="瓶">瓶</option><option value="袋">袋</option><option value="套">套</option><option value="个">个</option>';
+
+    tr.innerHTML =
+        '<td class="px-2 py-2"><select class="inv-cat w-full px-1 py-1 border border-gray-300 rounded text-xs">' + catOpts + '</select></td>' +
+        '<td class="px-2 py-2"><input type="text" class="inv-name w-full px-2 py-1 border border-gray-300 rounded text-xs" placeholder="商品名称"></td>' +
+        '<td class="px-2 py-2"><input type="text" class="inv-spec w-full px-2 py-1 border border-gray-300 rounded text-xs"></td>' +
+        '<td class="px-2 py-2"><input type="number" class="inv-qty w-full px-2 py-1 border border-gray-300 rounded text-xs" step="0.01" value="1"></td>' +
+        '<td class="px-2 py-2"><select class="inv-unit w-full px-1 py-1 border border-gray-300 rounded text-xs">' + unitOpts + '</select></td>' +
+        '<td class="px-2 py-2"><input type="text" class="inv-batch w-full px-2 py-1 border border-gray-300 rounded text-xs"></td>' +
+        '<td class="px-2 py-2"><input type="date" class="inv-prod-date w-full px-1 py-1 border border-gray-300 rounded text-xs"></td>' +
+        '<td class="px-2 py-2"><input type="date" class="inv-expiry w-full px-1 py-1 border border-gray-300 rounded text-xs"></td>' +
+        '<td class="px-2 py-2"><input type="text" class="inv-mfr w-full px-2 py-1 border border-gray-300 rounded text-xs"></td>' +
+        '<td class="px-2 py-2"><input type="text" class="inv-license w-full px-2 py-1 border border-gray-300 rounded text-xs"></td>' +
+        '<td class="px-2 py-2"><input type="number" class="inv-price w-full px-2 py-1 border border-gray-300 rounded text-xs" step="0.0001" placeholder="选填" onblur="calcInvTax(this)"></td>' +
+        '<td class="px-2 py-2"><input type="text" class="inv-tax w-full px-2 py-1 border border-gray-200 rounded text-xs bg-gray-50" readonly placeholder="自动"></td>' +
+        '<td class="px-2 py-2"><input type="number" class="inv-total w-full px-2 py-1 border border-gray-300 rounded text-xs" step="0.0001" placeholder="必填" onblur="calcInvTax(this)"></td>' +
+        '<td class="px-2 py-2 text-center"><span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">合格</span></td>' +
+        '<td class="px-2 py-2"><button onclick="this.closest(\'tr\').remove()" class="text-red-400 hover:text-red-600 text-xs p-1">✕</button></td>';
+
+    tbody.appendChild(tr);
+}
+
+function calcInvTax(input) {
+    var row = input.closest('tr');
+    var price = parseFloat(row.querySelector('.inv-price').value) || 0;
+    var total = parseFloat(row.querySelector('.inv-total').value) || 0;
+    var taxInput = row.querySelector('.inv-tax');
+    if (price > 0 && total > 0) {
+        var tax = total - price;
+        taxInput.value = tax > 0 ? tax.toFixed(2) : '0';
+    } else { taxInput.value = ''; }
+}
+
+function clearInventoryForm() {
+    if (!confirm('确定清空所有已录入的数据？')) return;
+    document.getElementById('inv-items-body').innerHTML = '';
+    _invRowCount = 0;
+    addInventoryRow();
+    removeInventoryPhoto();
+    document.getElementById('inv-remark').value = '';
+}
+
+function submitInventory() {
+    var supplierId = document.getElementById('inv-supplier').value;
+    var remark = document.getElementById('inv-remark').value;
+
+    var items = [];
+    var rows = document.querySelectorAll('.inv-item-row');
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var name = row.querySelector('.inv-name').value.trim();
+        var qty = row.querySelector('.inv-qty').value;
+        var unit = row.querySelector('.inv-unit').value;
+        var total = row.querySelector('.inv-total').value;
+        if (!name) { alert('第' + (i+1) + '行：名称不能为空'); return; }
+        if (!qty) { alert('第' + (i+1) + '行：数量不能为空'); return; }
+        if (!unit) { alert('第' + (i+1) + '行：单位不能为空'); return; }
+        if (!total) { alert('第' + (i+1) + '行：总价不能为空'); return; }
+
+        items.push({
+            category: row.querySelector('.inv-cat').value,
+            name: name,
+            specification: row.querySelector('.inv-spec').value || null,
+            quantity: parseFloat(qty),
+            unit: unit,
+            batch_no: row.querySelector('.inv-batch').value || null,
+            production_date: row.querySelector('.inv-prod-date').value || null,
+            expiry_date: row.querySelector('.inv-expiry').value || null,
+            manufacturer: row.querySelector('.inv-mfr').value || null,
+            manufacturer_license: row.querySelector('.inv-license').value || null,
+            unit_price: parseFloat(row.querySelector('.inv-price').value) || null,
+            tax_amount: parseFloat(row.querySelector('.inv-tax').value) || null,
+            total_price: parseFloat(total)
+        });
+    }
+
+    if (items.length === 0) { alert('请至少录入一个商品'); return; }
+
+    api('/api/inventory/', {
+        method: 'POST',
+        body: JSON.stringify({ photo_id: _invPhotoId, supplier_id: supplierId || null, operator: null, remark: remark, items: items })
+    }).then(function(res) {
+        if (res.code === 200) { alert(res.message); clearInventoryForm(); }
+        else { alert(res.message || '入库失败'); }
+    }).catch(function(e) { alert('入库失败: ' + e.message); });
+}
+
+// ==================== 供应商管理 ====================
+
+function openSupplierModal(supplier) {
+    document.getElementById('supplier-modal').classList.remove('hidden');
+    if (supplier && supplier.id) {
+        _currentEditSupplierId = supplier.id;
+        document.getElementById('supplier-modal-title').textContent = '编辑供应商';
+        document.getElementById('supplier-id').value = supplier.id;
+        document.getElementById('supplier-name').value = supplier.name || '';
+        document.getElementById('supplier-contact').value = supplier.contact_person || '';
+        document.getElementById('supplier-phone').value = supplier.phone || '';
+        document.getElementById('supplier-address').value = supplier.address || '';
+        document.getElementById('supplier-license-no').value = supplier.business_license_no || '';
+        document.getElementById('supplier-remark').value = supplier.remark || '';
+        document.getElementById('supplier-photo-section').classList.remove('hidden');
+        loadSupplierPhotos(supplier.id);
+    } else {
+        _currentEditSupplierId = null;
+        document.getElementById('supplier-modal-title').textContent = '新增供应商';
+        document.getElementById('supplier-id').value = '';
+        document.getElementById('supplier-name').value = '';
+        document.getElementById('supplier-contact').value = '';
+        document.getElementById('supplier-phone').value = '';
+        document.getElementById('supplier-address').value = '';
+        document.getElementById('supplier-license-no').value = '';
+        document.getElementById('supplier-remark').value = '';
+        // v8.6.3: 新增时也显示证照区域，但显示提示
+        document.getElementById('supplier-photo-section').classList.remove('hidden');
+        showSupplierPhotoUploadHint();
+    }
+}
+
+function showSupplierPhotoUploadHint() {
+    // 新增状态下显示提示文字
+    var types = { '营业执照': 'supplier-photo-business', '医疗器械经营许可证': 'supplier-photo-medical', '其他': 'supplier-photo-other' };
+    for (var t in types) {
+        var el = document.getElementById(types[t]); if (!el) continue;
+        el.innerHTML = '<div class="text-xs text-gray-400 py-1">保存后可上传</div>';
+    }
+}
+
+function closeSupplierModal() {
+    document.getElementById('supplier-modal').classList.add('hidden');
+    _currentEditSupplierId = null;
+}
+
+function saveSupplier() {
+    var name = document.getElementById('supplier-name').value.trim();
+    if (!name) { alert('供应商名称不能为空'); return; }
+
+    var data = {
+        name: name,
+        contact_person: document.getElementById('supplier-contact').value,
+        phone: document.getElementById('supplier-phone').value,
+        address: document.getElementById('supplier-address').value,
+        business_license_no: document.getElementById('supplier-license-no').value,
+        remark: document.getElementById('supplier-remark').value
+    };
+
+    var url = '/api/inventory/suppliers';
+    var method = 'POST';
+    if (_currentEditSupplierId) { url = '/api/inventory/suppliers/' + _currentEditSupplierId; method = 'PUT'; }
+
+    api(url, { method: method, body: JSON.stringify(data) }).then(function(res) {
+        if (res.code === 200) {
+            if (!_currentEditSupplierId && res.data && res.data.id) {
+                // 新增成功：自动切换到编辑模式，方便上传证照
+                var newSupplier = {
+                    id: res.data.id,
+                    name: data.name,
+                    contact_person: data.contact_person,
+                    phone: data.phone,
+                    address: data.address,
+                    business_license_no: data.business_license_no,
+                    remark: data.remark
+                };
+                openSupplierModal(newSupplier);
+                loadSuppliers();
+                loadSuppliersForSelect();
+                alert('供应商已保存，现在可以上传证照了');
+            } else {
+                // 编辑成功：关闭弹窗
+                closeSupplierModal(); loadSuppliers(); loadSuppliersForSelect();
+            }
+        }
+        else { alert(res.message || '保存失败'); }
+    }).catch(function(e) { alert('保存失败: ' + e.message); });
+}
+
+function loadSuppliers() {
+    var keyword = document.getElementById('invs-search') ? document.getElementById('invs-search').value.trim() : '';
+    api('/api/inventory/suppliers').then(function(res) {
+        if (res.code !== 200) return;
+        var tbody = document.getElementById('invs-list-body');
+        if (!tbody) return;
+        var items = res.data;
+        if (keyword) items = items.filter(function(s) { return s.name.indexOf(keyword) >= 0; });
+        if (items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">暂无供应商</td></tr>';
+            return;
+        }
+        tbody.innerHTML = items.map(function(s) {
+            return '<tr>' +
+                '<td class="px-4 py-3 font-medium">' + (s.name || '') + '</td>' +
+                '<td class="px-4 py-3 text-gray-500">' + (s.contact_person || '-') + '</td>' +
+                '<td class="px-4 py-3 text-gray-500">' + (s.phone || '-') + '</td>' +
+                '<td class="px-4 py-3 text-gray-500">' + (s.business_license_no || '-') + '</td>' +
+                '<td class="px-4 py-3 text-center"><span class="text-xs text-blue-500 cursor-pointer hover:underline" onclick="viewSupplierPhotos(' + s.id + ')">查看</span></td>' +
+                '<td class="px-4 py-3 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs ' + (s.status === '启用' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500') + '">' + (s.status || '启用') + '</span></td>' +
+                '<td class="px-4 py-3 text-center">' +
+                    '<button onclick="editSupplier(' + s.id + ')" class="text-blue-500 hover:text-blue-700 text-xs mr-2">编辑</button>' +
+                    '<button onclick="deleteSupplier(' + s.id + ')" class="text-red-400 hover:text-red-600 text-xs">停用</button>' +
+                '</td></tr>';
+        }).join('');
+    }).catch(function(e) { console.log(e); });
+}
+
+function editSupplier(id) {
+    api('/api/inventory/suppliers').then(function(res) {
+        if (res.code !== 200) return;
+        var s = res.data.find(function(x) { return x.id === id; });
+        if (s) openSupplierModal(s);
+    }).catch(function(e) { console.log(e); });
+}
+
+function deleteSupplier(id) {
+    if (!confirm('确定停用此供应商？')) return;
+    api('/api/inventory/suppliers/' + id, { method: 'DELETE' }).then(function(res) {
+        if (res.code === 200) loadSuppliers();
+    }).catch(function(e) { alert('停用失败: ' + e.message); });
+}
+
+function uploadSupplierPhoto(photoType) {
+    if (!_currentEditSupplierId) { alert('请先保存供应商信息'); return; }
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.jpeg,.jpg,.pdf';
+    input.onchange = function() {
+        var file = input.files[0]; if (!file) return;
+        // 校验文件类型
+        var isJpeg = /\.jpe?g$/i.test(file.name);
+        var isPdf = /\.pdf$/i.test(file.name);
+        if (!isJpeg && !isPdf) { alert('仅支持 JPEG/JPG 和 PDF 格式'); return; }
+        if (file.size > 10 * 1024 * 1024) { alert('文件大小不能超过10MB'); return; }
+        var formData = new FormData();
+        formData.append('file', file); formData.append('photo_type', photoType);
+        fetch('/api/inventory/suppliers/' + _currentEditSupplierId + '/photos', { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.code === 200) { alert('上传成功'); loadSupplierPhotos(_currentEditSupplierId); }
+                else { alert(res.message || '上传失败'); }
+            }).catch(function(e) { alert('上传失败: ' + e.message); });
+    };
+    input.click();
+}
+
+function loadSupplierPhotos(supplierId) {
+    api('/api/inventory/suppliers/' + supplierId + '/photos').then(function(res) {
+        if (res.code !== 200) return;
+        var types = { '营业执照': 'supplier-photo-business', '医疗器械经营许可证': 'supplier-photo-medical', '其他': 'supplier-photo-other' };
+        for (var t in types) {
+            var el = document.getElementById(types[t]); if (!el) continue;
+            var photos = res.data.filter(function(p) { return p.photo_type === t; });
+            if (photos.length > 0) {
+                el.innerHTML = photos.map(function(p) {
+                    var isPdf = /\.pdf$/i.test(p.storage_path || '');
+                    var fname = (p.storage_path || '').split('/').pop();
+                    var icon = isPdf ? '📄' : '🖼️';
+                    var action = isPdf
+                        ? 'window.open(\'/uploads/supplier/' + fname + '\',\'_blank\')'
+                        : 'window.open(\'/uploads/supplier/' + fname + '\',\'_blank\')';
+                    return '<div class="flex items-center justify-between bg-gray-50 rounded px-2 py-1">' +
+                        '<span class="text-xs text-gray-600 truncate flex-1 mr-1 cursor-pointer hover:text-blue-600" onclick="' + action + '" title="' + fname + '">' + icon + ' ' + fname.substring(0, 12) + '..' + '</span>' +
+                        '<button onclick="if(confirm(\'删除这张证照?\'))deleteSupplierPhoto(' + p.id + ')" class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>' +
+                        '</div>';
+                }).join('') +
+                    '<button onclick="uploadSupplierPhoto(\'' + t + '\')" class="w-full px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 mt-1">+ 上传</button>';
+            } else {
+                el.innerHTML = '<button onclick="uploadSupplierPhoto(\'' + t + '\')" class="w-full px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200">上传</button>';
+            }
+        }
+    }).catch(function(e) { console.log(e); });
+}
+
+function deleteSupplierPhoto(photoId) {
+    api('/api/inventory/supplier-photos/' + photoId, { method: 'DELETE' }).then(function(res) {
+        if (res.code === 200) { loadSupplierPhotos(_currentEditSupplierId); }
+        else { alert(res.message || '删除失败'); }
+    }).catch(function(e) { alert('删除失败: ' + e.message); });
+}
+
+function viewSupplierPhotos(supplierId) {
+    api('/api/inventory/suppliers/' + supplierId + '/photos').then(function(res) {
+        if (res.code !== 200 || res.data.length === 0) { alert('暂无证照'); return; }
+        var listEl = document.getElementById('supplier-photo-view-list');
+        if (!listEl) { alert('暂无证照'); return; }
+        listEl.innerHTML = res.data.map(function(p) {
+            var fname = (p.storage_path || '').split('/').pop();
+            var isPdf = /\.pdf$/i.test(p.storage_path || '');
+            var url = '/uploads/supplier/' + fname;
+            if (isPdf) {
+                return '<div class="border rounded-lg p-3 bg-gray-50">' +
+                    '<div class="flex items-center justify-between mb-2">' +
+                    '<span class="text-sm font-medium">📄 ' + (p.photo_type || 'PDF') + '</span>' +
+                    '<a href="' + url + '" target="_blank" class="text-xs text-blue-500 hover:underline">下载/打开</a>' +
+                    '</div>' +
+                    '<div class="text-xs text-gray-400">' + fname + '</div>' +
+                    '</div>';
+            } else {
+                return '<div class="border rounded-lg p-3">' +
+                    '<div class="text-sm font-medium mb-2">🖼️ ' + (p.photo_type || '图片') + '</div>' +
+                    '<img src="' + url + '" class="max-h-60 border rounded cursor-pointer" onclick="window.open(\'' + url + '\')" title="点击放大">' +
+                    '<div class="text-xs text-gray-400 mt-1">' + fname + '</div>' +
+                    '</div>';
+            }
+        }).join('');
+        document.getElementById('supplier-photo-view-modal').classList.remove('hidden');
+    }).catch(function() { alert('查看失败'); });
+}
+
+// ==================== 入库历史查询 ====================
+
+function loadSuppliersForHistory() {
+    api('/api/inventory/suppliers').then(function(res) {
+        if (res.code !== 200) return;
+        var sel = document.getElementById('invh-supplier');
+        if (!sel) return;
+        var html = '<option value="">全部</option>';
+        res.data.forEach(function(s) { html += '<option value="' + s.id + '">' + s.name + '</option>'; });
+        sel.innerHTML = html;
+    }).catch(function(e) { console.log(e); });
+}
+
+function loadInventoryHistory(page) {
+    page = page || _invhCurrentPage || 1;
+    _invhCurrentPage = page;
+
+    var keyword = document.getElementById('invh-keyword') ? document.getElementById('invh-keyword').value : '';
+    var supplierId = document.getElementById('invh-supplier') ? document.getElementById('invh-supplier').value : '';
+    var dateFrom = document.getElementById('invh-date-from') ? document.getElementById('invh-date-from').value : '';
+    var dateTo = document.getElementById('invh-date-to') ? document.getElementById('invh-date-to').value : '';
+
+    var params = new URLSearchParams();
+    params.append('page', page); params.append('page_size', 20);
+    if (keyword) params.append('keyword', keyword);
+    if (supplierId) params.append('supplier_id', supplierId);
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
+
+    api('/api/inventory/?' + params.toString()).then(function(res) {
+        if (res.code !== 200) return;
+        var tbody = document.getElementById('invh-list-body');
+        var items = res.data.items || [];
+        if (items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-gray-400">暂无入库记录</td></tr>';
+            document.getElementById('invh-pagination').innerHTML = '';
+            return;
+        }
+
+        tbody.innerHTML = items.map(function(r) {
+            var date = formatDateTime(r.created_at);
+            var batch = r.batch_no_rk || '';
+            var supplier = r.supplier_name || '-';
+            var qualified = r.is_qualified === '合格'
+                ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span>合格</span>'
+                : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><span class="w-1.5 h-1.5 rounded-full bg-red-500 mr-1"></span>' + (r.is_qualified || '待检') + '</span>';
+            return '<tr class="hover:bg-gray-50">' +
+                '<td class="px-4 py-3 text-gray-600">' + date + '</td>' +
+                '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + batch + '</td>' +
+                '<td class="px-4 py-3">' + supplier + '</td>' +
+                '<td class="px-4 py-3 font-medium">' + (r.name || '') + '</td>' +
+                '<td class="px-4 py-3 text-right">' + (r.quantity || 0) + ' ' + (r.unit || '') + '</td>' +
+                '<td class="px-4 py-3 text-center text-gray-600">' + formatDate(r.production_date) + '</td>' +
+                '<td class="px-4 py-3 text-center text-gray-600">' + formatDate(r.expiry_date) + '</td>' +
+                '<td class="px-4 py-3 text-center">' + qualified + '</td>' +
+                '<td class="px-4 py-3 text-center">' +
+                    '<button onclick="showInventoryDetail(' + r.id + ')" class="text-blue-500 hover:text-blue-700 text-xs mr-2">详情</button>' +
+                    '<button onclick="openInventoryEdit(' + r.id + ')" class="text-emerald-600 hover:text-emerald-800 text-xs mr-2">编辑</button>' +
+                    '<button onclick="deleteInventory(' + r.id + ')" class="text-red-400 hover:text-red-600 text-xs">删除</button>' +
+                '</td></tr>';
+        }).join('');
+
+        var total = res.data.total || 0;
+        var pageSize = res.data.page_size || 20;
+        var totalPages = Math.ceil(total / pageSize);
+        var pgHtml = '<span class="text-sm text-gray-500">共 ' + total + ' 条</span><div class="flex gap-1">';
+        for (var i = 1; i <= totalPages; i++) {
+            pgHtml += '<button onclick="loadInventoryHistory(' + i + ')" class="px-2 py-1 text-xs rounded ' + (i === page ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200') + '">' + i + '</button>';
+        }
+        pgHtml += '</div>';
+        document.getElementById('invh-pagination').innerHTML = pgHtml;
+    }).catch(function(e) { console.log('[InventoryHistory] error', e); });
+}
+
+function showInventoryDetail(id) {
+    api('/api/inventory/' + id).then(function(res) {
+        if (res.code !== 200) { alert('记录不存在'); return; }
+        var r = res.data;
+        var html = '<div class="grid grid-cols-2 gap-3">' +
+            '<div><span class="text-gray-500">名称:</span> ' + (r.name || '') + '</div>' +
+            '<div><span class="text-gray-500">规格:</span> ' + (r.specification || '-') + '</div>' +
+            '<div><span class="text-gray-500">数量:</span> ' + (r.quantity || 0) + ' ' + (r.unit || '') + '</div>' +
+            '<div><span class="text-gray-500">总价:</span> ' + (r.total_price || 0) + '</div>' +
+            '<div><span class="text-gray-500">批号:</span> ' + (r.batch_no || '-') + '</div>' +
+            '<div><span class="text-gray-500">生产日期:</span> ' + formatDate(r.production_date) + '</div>' +
+            '<div><span class="text-gray-500">有效期:</span> ' + formatDate(r.expiry_date) + '</div>' +
+            '<div><span class="text-gray-500">生产企业:</span> ' + (r.manufacturer || '-') + '</div>' +
+            '<div><span class="text-gray-500">供应商:</span> ' + (r.supplier_name || '-') + '</div>' +
+            '<div class="col-span-2"><span class="text-gray-500">入库时间:</span> ' + formatDateTime(r.created_at) + '</div>' +
+            '<div class="col-span-2"><span class="text-gray-500">合格状态:</span> <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 ml-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span>合格</span></div>';
+        if (r.photo_path) {
+            var pathParts = r.photo_path.split('/');
+            var fname = pathParts[pathParts.length - 1];
+            html += '<div class="col-span-2 mt-2"><span class="text-gray-500">出库单照片:</span><br><img src="/uploads/inventory/' + fname + '" class="mt-2 max-h-60 border rounded"></div>';
+        }
+        html += '</div>';
+        document.getElementById('inventory-detail-content').innerHTML = html;
+        // 绑定编辑按钮
+        document.getElementById('inv-detail-edit-btn').onclick = function() {
+            closeInventoryDetail();
+            openInventoryEdit(id);
+        };
+        document.getElementById('inventory-detail-modal').classList.remove('hidden');
+    }).catch(function() { alert('加载失败'); });
+}
+
+function closeInventoryDetail() {
+    document.getElementById('inventory-detail-modal').classList.add('hidden');
+}
+
+function deleteInventory(id) {
+    if (!confirm('确定删除这条入库记录？')) return;
+    api('/api/inventory/' + id, { method: 'DELETE' }).then(function(res) {
+        if (res.code === 200) { alert('已删除'); loadInventoryHistory(_invhCurrentPage); }
+        else { alert(res.message || '删除失败'); }
+    }).catch(function(e) { alert('删除失败: ' + e.message); });
+}
+
+// ==================== 入库编辑 ====================
+
+var _currentEditInvId = null;
+
+function openInventoryEdit(id) {
+    _currentEditInvId = id;
+    // 加载供应商列表
+    var supplierSelect = document.getElementById('inv-edit-supplier');
+    if (supplierSelect && supplierSelect.options.length <= 1) {
+        api('/api/inventory/suppliers').then(function(res) {
+            if (res.code === 200) {
+                supplierSelect.innerHTML = '<option value="">无</option>';
+                (res.data || []).forEach(function(s) {
+                    supplierSelect.innerHTML += '<option value="' + s.id + '">' + s.name + '</option>';
+                });
+            }
+        });
+    }
+    // 加载记录数据
+    api('/api/inventory/' + id).then(function(res) {
+        if (res.code !== 200) { alert('加载失败'); return; }
+        var r = res.data;
+        document.getElementById('inv-edit-id').value = r.id || '';
+        document.getElementById('inv-edit-name').value = r.name || '';
+        document.getElementById('inv-edit-cat').value = r.category || '耗材';
+        document.getElementById('inv-edit-spec').value = r.specification || '';
+        document.getElementById('inv-edit-qty').value = r.quantity || '';
+        document.getElementById('inv-edit-unit').value = r.unit || '';
+        document.getElementById('inv-edit-batch').value = r.batch_no || '';
+        document.getElementById('inv-edit-prod-date').value = (r.production_date || '').split('T')[0];
+        document.getElementById('inv-edit-expiry').value = (r.expiry_date || '').split('T')[0];
+        document.getElementById('inv-edit-mfr').value = r.manufacturer || '';
+        document.getElementById('inv-edit-license').value = r.manufacturer_license || '';
+        document.getElementById('inv-edit-price').value = r.unit_price || '';
+        document.getElementById('inv-edit-total').value = r.total_price || '';
+        document.getElementById('inv-edit-tax').value = r.tax_amount || '';
+        document.getElementById('inv-edit-supplier').value = r.supplier_id || '';
+        document.getElementById('inv-edit-remark').value = r.remark || '';
+        document.getElementById('inventory-edit-modal').classList.remove('hidden');
+    }).catch(function() { alert('加载失败'); });
+}
+
+function closeInventoryEdit() {
+    document.getElementById('inventory-edit-modal').classList.add('hidden');
+    _currentEditInvId = null;
+}
+
+function calcInvEditTax() {
+    var price = parseFloat(document.getElementById('inv-edit-price').value) || 0;
+    var total = parseFloat(document.getElementById('inv-edit-total').value) || 0;
+    var taxInput = document.getElementById('inv-edit-tax');
+    if (price > 0 && total > 0) {
+        var tax = total - price;
+        taxInput.value = tax > 0 ? tax.toFixed(2) : '0';
+    } else { taxInput.value = ''; }
+}
+
+function submitInventoryEdit() {
+    if (!_currentEditInvId) return;
+    var name = document.getElementById('inv-edit-name').value.trim();
+    var qty = document.getElementById('inv-edit-qty').value;
+    var unit = document.getElementById('inv-edit-unit').value;
+    var total = document.getElementById('inv-edit-total').value;
+    if (!name) { alert('名称不能为空'); return; }
+    if (!qty) { alert('数量不能为空'); return; }
+    if (!unit) { alert('单位不能为空'); return; }
+    if (!total) { alert('总价不能为空'); return; }
+
+    var price = parseFloat(document.getElementById('inv-edit-price').value) || 0;
+    var totalVal = parseFloat(total);
+    var tax = null;
+    if (price > 0 && totalVal > 0) {
+        tax = totalVal - price;
+        if (tax < 0) tax = 0;
+    }
+
+    var data = {
+        name: name,
+        category: document.getElementById('inv-edit-cat').value,
+        specification: document.getElementById('inv-edit-spec').value || null,
+        quantity: parseFloat(qty),
+        unit: unit,
+        batch_no: document.getElementById('inv-edit-batch').value || null,
+        production_date: document.getElementById('inv-edit-prod-date').value || null,
+        expiry_date: document.getElementById('inv-edit-expiry').value || null,
+        manufacturer: document.getElementById('inv-edit-mfr').value || null,
+        manufacturer_license: document.getElementById('inv-edit-license').value || null,
+        unit_price: price || null,
+        tax_amount: tax,
+        total_price: totalVal,
+        supplier_id: document.getElementById('inv-edit-supplier').value || null,
+        remark: document.getElementById('inv-edit-remark').value
+    };
+
+    api('/api/inventory/' + _currentEditInvId, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    }).then(function(res) {
+        if (res.code === 200) {
+            alert('更新成功');
+            closeInventoryEdit();
+            loadInventoryHistory(_invhCurrentPage);
+        } else { alert(res.message || '更新失败'); }
+    }).catch(function(e) { alert('更新失败: ' + e.message); });
+}
+
+// ==================== 库存预警 ====================
+
+function loadInventoryWarnings(level) {
+    level = level || 'all';
+    document.querySelectorAll('.invw-filter').forEach(function(btn) {
+        if (btn.dataset.filter === level) {
+            btn.classList.remove('bg-gray-100', 'text-gray-600');
+            btn.classList.add('bg-primary', 'text-white');
+        } else {
+            btn.classList.remove('bg-primary', 'text-white');
+            btn.classList.add('bg-gray-100', 'text-gray-600');
+        }
+    });
+
+    api('/api/inventory/warnings?level=' + level).then(function(res) {
+        if (res.code !== 200) return;
+        var tbody = document.getElementById('invw-list-body');
+        var items = res.data || [];
+        if (items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">暂无预警商品</td></tr>';
+            return;
+        }
+        tbody.innerHTML = items.map(function(r) {
+            var remain = r.remain_days || 0;
+            var status;
+            if (r.warn_level === 'expired') {
+                status = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><span class="w-1.5 h-1.5 rounded-full bg-red-500 mr-1"></span>已过期</span>';
+            } else if (r.warn_level === 'critical') {
+                status = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800"><span class="w-1.5 h-1.5 rounded-full bg-orange-500 mr-1"></span>30天内</span>';
+            } else if (r.warn_level === 'warning') {
+                status = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><span class="w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1"></span>90天内</span>';
+            } else {
+                status = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span>正常</span>';
+            }
+            return '<tr class="hover:bg-gray-50">' +
+                '<td class="px-4 py-3 font-medium">' + (r.name || '') + '</td>' +
+                '<td class="px-4 py-3 text-gray-500 text-xs">' + (r.batch_no || '-') + '</td>' +
+                '<td class="px-4 py-3 text-gray-500">' + (r.specification || '-') + '</td>' +
+                '<td class="px-4 py-3 text-right">' + (r.current_stock || 0) + ' ' + (r.unit || '') + '</td>' +
+                '<td class="px-4 py-3 text-center text-gray-600">' + formatDate(r.production_date) + '</td>' +
+                '<td class="px-4 py-3 text-center text-gray-600">' + formatDate(r.expiry_date) + '</td>' +
+                '<td class="px-4 py-3 text-right ' + (remain < 0 ? 'text-red-600 font-medium' : (remain <= 30 ? 'text-orange-600' : '')) + '">' + (remain < 0 ? '已过期' : remain + ' 天') + '</td>' +
+                '<td class="px-4 py-3 text-center">' + status + '</td></tr>';
+        }).join('');
+    }).catch(function(e) { console.log(e); });
 }
