@@ -71,6 +71,11 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     <span class="font-medium">系统设置</span>
                 </a>
+                <!-- v8.5.5 知情同意书 -->
+                <a href="#" data-page="consents" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span class="font-medium">知情同意书</span>
+                </a>
                 <!-- v8.5 库存管理 -->
                 <div class="inventory-nav-group">
                     <a href="#" data-page="inventory" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
@@ -1421,6 +1426,305 @@
                         </thead>
                         <tbody id="invs-list-body" class="divide-y"></tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- ====== 知情同意书 ====== -->
+            <div id="page-consents" class="page-content space-y-6 hidden">
+                <!-- 1. 列表 -->
+                <div id="consent-list-view">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900">知情同意书</h2>
+                            <p class="text-sm text-gray-500 mt-1">种植手术知情同意书管理</p>
+                        </div>
+                        <button onclick="showConsentForm()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            新建同意书
+                        </button>
+                    </div>
+                    <!-- 筛选 -->
+                    <div class="bg-white rounded-xl shadow-sm border p-4">
+                        <div class="flex flex-wrap items-end gap-3">
+                            <input type="text" id="consent-keyword" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-48" placeholder="姓名/编号" onkeydown="if(event.key==='Enter')loadConsents()">
+                            <select id="consent-status" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-28">
+                                <option value="">全部状态</option>
+                                <option value="草稿">草稿</option>
+                                <option value="已完成">已完成</option>
+                            </select>
+                            <button onclick="loadConsents()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm">搜索</button>
+                        </div>
+                    </div>
+                    <!-- 列表 -->
+                    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 text-gray-600">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">编号</th>
+                                    <th class="px-4 py-3 text-left">患者姓名</th>
+                                    <th class="px-4 py-3 text-center">性别/年龄</th>
+                                    <th class="px-4 py-3 text-left">种植品牌</th>
+                                    <th class="px-4 py-3 text-left">牙位</th>
+                                    <th class="px-4 py-3 text-center">签名状态</th>
+                                    <th class="px-4 py-3 text-center">预览</th>
+                                    <th class="px-4 py-3 text-center">PDF</th>
+                                    <th class="px-4 py-3 text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="consent-list-body" class="divide-y"></tbody>
+                        </table>
+                        <div id="consent-pagination" class="flex items-center justify-between px-4 py-3 border-t bg-gray-50"></div>
+                    </div>
+                </div>
+
+                <!-- 2. 新建/编辑表单 -->
+                <div id="consent-form-view" class="hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <button onclick="showConsentList()" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                            返回列表
+                        </button>
+                        <div class="flex gap-2">
+                            <button onclick="saveConsentDraft()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">保存草稿</button>
+                            <button onclick="previewConsent()" id="consent-preview-btn" class="px-4 py-2 text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 text-sm">预览</button>
+                            <button onclick="completeConsent()" id="consent-complete-btn" class="hidden px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">完成归档</button>
+                        </div>
+                    </div>
+
+                    <!-- 头部信息 -->
+                    <div class="bg-white rounded-xl shadow-sm border p-6 mb-4">
+                        <div class="text-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-900">种植手术知情同意书</h2>
+                        </div>
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="text-sm text-gray-600">编号：<span id="consent-display-no" class="font-mono font-medium">________</span></div>
+                            <div class="text-sm text-gray-600">日期：<span id="consent-display-date">____年____月____日</span></div>
+                        </div>
+                        <input type="hidden" id="consent-id">
+                        <!-- 患者信息 -->
+                        <div class="grid grid-cols-4 gap-3 border rounded-lg p-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">姓名 *</label>
+                                <input type="text" id="consent-name" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">性别 *</label>
+                                <select id="consent-gender" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                    <option value="">请选择</option>
+                                    <option value="男">男</option>
+                                    <option value="女">女</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">年龄</label>
+                                <input type="number" id="consent-age" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" min="0" max="120">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">NO.</label>
+                                <input type="text" id="consent-no" class="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-50" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 正文条款（只读） -->
+                    <div class="bg-white rounded-xl shadow-sm border p-6 mb-4 text-sm leading-relaxed text-gray-700 space-y-3">
+                        <p class="text-justify indent-8">1、我理解种植手术治疗的目的和程序，在经过比较后我愿意选择并要求做种植治疗，我理解作为患者应配合医生完成整个治疗过程。</p>
+                        <p class="text-justify indent-8">2、我将负责地向医生报告自己的健康状况、既往病史、药物过敏史等，如有隐瞒，愿承担后果。</p>
+                        <p class="text-justify indent-8">3、医生已向我介绍了有关麻醉、手术的危险性及可能出现的并发症、术后反应等；如肿胀、疼痛、感染、局部麻木（一时性或长久性）、牙齿损伤、颌骨骨折、上颌窦穿孔、延迟愈合、种植体失败等。我理解这些治疗过程中的一系列问题，并在此基础上同意医生实施种植治疗。</p>
+                        <p class="text-justify indent-8">4、我同意医生为我选择的种植体品牌为<u id="consent-brand-display" class="text-blue-600">__________</u>，型号为<u id="consent-model-display" class="text-blue-600">__________</u>，种植牙位为<u id="consent-tooth-display" class="text-blue-600 cursor-pointer" onclick="openToothSelector()">__________</u>，种植体数目为<u id="consent-count-display" class="text-blue-600">__________</u>，医生已经向我详细介绍了整个治疗过程所需的时间和费用，我可以接受，我也同意医生在术中由于新发现的问题而改变原来的种植计划。</p>
+                        <p class="text-justify indent-8">5、我理解按口腔医学"种植失败"定义：在正常行使口腔功能的情况下，所出现的种植体松动、脱落、折断而需从骨内取出种植体（不包括外伤所致的种植体损害）。当种植失败时，医生可根据情况决定取出种植体及采取必要的治疗措施。</p>
+                        <p class="text-justify indent-8">6、我同意医生在治疗过程中照相、录像以及收集各种资料，医生可利用这些资料作为学术交流与研究，但不可公开身份。</p>
+                        <p class="text-justify indent-8">7、种植修复完成后，我将遵照医嘱，保证术后控制吸烟，注意饮食，避免咬过硬食物，坚持正确刷牙。保持口腔卫生，避免外伤，同时保证每半年到一年定期复查。</p>
+                        <p class="text-justify indent-8 font-medium">以上牙种植治疗知情同意书，患者已知情同意并签字。</p>
+                    </div>
+
+                    <!-- 手术信息编辑 -->
+                    <div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
+                        <h3 class="font-medium text-gray-900 mb-3">手术信息</h3>
+                        <div class="grid grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">植体品牌</label>
+                                <input type="text" id="consent-brand" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" oninput="document.getElementById('consent-brand-display').textContent=this.value||'__________'">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">型号</label>
+                                <input type="text" id="consent-model" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" oninput="document.getElementById('consent-model-display').textContent=this.value||'__________'">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">种植牙位 <span class="text-blue-500 cursor-pointer" onclick="openToothSelector()">[选择]</span></label>
+                                <input type="text" id="consent-tooth" class="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-50" readonly placeholder="点击选择">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">种植体数目</label>
+                                <input type="number" id="consent-count" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" value="1" min="1" oninput="document.getElementById('consent-count-display').textContent=this.value||'__________'">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 签名区域 -->
+                    <div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
+                        <h3 class="font-medium text-gray-900 mb-3">签名区域</h3>
+                        <div class="space-y-4">
+                            <!-- 患者签名 -->
+                            <div class="flex items-center gap-4 border-b pb-4">
+                                <div class="w-24 text-sm text-gray-600">患者签名</div>
+                                <div class="flex-1">
+                                    <div id="consent-patient-sign-preview" class="h-16 border rounded bg-gray-50 flex items-center justify-center text-gray-400 text-sm cursor-pointer hover:bg-gray-100" onclick="openSignPad('patient')">
+                                        <span id="consent-patient-sign-text">点击签名</span>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-500" id="consent-patient-sign-date"></div>
+                            </div>
+                            <!-- 亲属签名 -->
+                            <div class="flex items-center gap-4 border-b pb-4">
+                                <div class="w-24 text-sm text-gray-600">亲属签名</div>
+                                <div class="flex-1">
+                                    <div id="consent-guardian-sign-preview" class="h-16 border rounded bg-gray-50 flex items-center justify-center text-gray-400 text-sm cursor-pointer hover:bg-gray-100" onclick="openSignPad('guardian')">
+                                        <span id="consent-guardian-sign-text">点击签名（可选）</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <select id="consent-guardian-relation" class="px-2 py-1 border border-gray-300 rounded text-sm">
+                                        <option value="">与患者关系</option>
+                                        <option value="父子">父子</option>
+                                        <option value="母子">母子</option>
+                                        <option value="父女">父女</option>
+                                        <option value="母女">母女</option>
+                                        <option value="兄弟">兄弟</option>
+                                        <option value="姐妹">姐妹</option>
+                                        <option value="其他监护人">其他监护人</option>
+                                    </select>
+                                    <div class="text-sm text-gray-500" id="consent-guardian-sign-date"></div>
+                                </div>
+                            </div>
+                            <!-- 主治医生签名 -->
+                            <div class="flex items-center gap-4">
+                                <div class="w-24 text-sm text-gray-600">主治医生签名</div>
+                                <div class="flex-1">
+                                    <div id="consent-doctor-sign-preview" class="h-16 border rounded bg-gray-50 flex items-center justify-center text-gray-400 text-sm cursor-pointer hover:bg-gray-100" onclick="openSignPad('doctor')">
+                                        <span id="consent-doctor-sign-text">点击签名</span>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-500" id="consent-doctor-sign-date"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 牙位选择弹窗 -->
+            <div id="tooth-selector-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900">选择种植牙位（FDI牙位表示法）</h3>
+                        <button onclick="closeToothSelector()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-center gap-16 text-sm text-gray-500 mb-2">
+                            <span>右上</span><span>左上</span>
+                        </div>
+                        <div class="flex justify-center gap-1" id="tooth-upper-row"></div>
+                        <div class="flex justify-center gap-16 text-sm text-gray-500 mt-2">
+                            <span>右下</span><span>左下</span>
+                        </div>
+                        <div class="flex justify-center gap-1" id="tooth-lower-row"></div>
+                        <div class="text-center text-sm text-gray-500 mt-2">已选：<span id="tooth-selected-display" class="font-medium text-blue-600">无</span></div>
+                        <div class="flex gap-2 pt-2">
+                            <button onclick="confirmToothSelection()" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium">确认</button>
+                            <button onclick="clearToothSelection()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm">清空</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 签名弹窗（Canvas签字板） -->
+            <div id="sign-pad-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900" id="sign-pad-title">电子签名</h3>
+                        <button onclick="closeSignPad()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="border-2 border-gray-300 rounded-lg bg-white" style="touch-action:none;">
+                        <canvas id="sign-pad-canvas" width="460" height="200" class="w-full rounded-lg cursor-crosshair"></canvas>
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="clearSignPad()" class="px-4 py-2 text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">清除重签</button>
+                        <button onclick="saveSignPad()" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium">确认签名</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- A4 预览弹窗 -->
+            <div id="consent-preview-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+                <div class="bg-white shadow-xl mx-auto" style="width:210mm; min-height:297mm; padding:20mm;">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b">
+                        <h2 class="text-2xl font-bold text-gray-900">种植手术知情同意书</h2>
+                        <button onclick="closeConsentPreview()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-600 mb-6">
+                        <div>编号：<span id="preview-no" class="font-mono font-medium">________</span></div>
+                        <div>日期：<span id="preview-date">____年____月____日</span></div>
+                    </div>
+                    <!-- 患者信息 -->
+                    <div class="grid grid-cols-4 gap-0 border mb-6">
+                        <div class="border p-2 text-sm">姓名：<span id="preview-name"></span></div>
+                        <div class="border p-2 text-sm">性别：<span id="preview-gender"></span></div>
+                        <div class="border p-2 text-sm">年龄：<span id="preview-age"></span></div>
+                        <div class="border p-2 text-sm font-mono">NO. <span id="preview-display-no"></span></div>
+                    </div>
+                    <!-- 正文条款 -->
+                    <div class="space-y-3 text-sm text-justify leading-relaxed mb-6">
+                        <p class="indent-8">1、我理解种植手术治疗的目的和程序，在经过比较后我愿意选择并要求做种植治疗，我理解作为患者应配合医生完成整个治疗过程。</p>
+                        <p class="indent-8">2、我将负责地向医生报告自己的健康状况、既往病史、药物过敏史等，如有隐瞒，愿承担后果。</p>
+                        <p class="indent-8">3、医生已向我介绍了有关麻醉、手术的危险性及可能出现的并发症、术后反应等；如肿胀、疼痛、感染、局部麻木（一时性或长久性）、牙齿损伤、颌骨骨折、上颌窦穿孔、延迟愈合、种植体失败等。我理解这些治疗过程中的一系列问题，并在此基础上同意医生实施种植治疗。</p>
+                        <p class="indent-8">4、我同意医生为我选择的种植体品牌为<u id="preview-brand" class="text-blue-600">__________</u>，型号为<u id="preview-model" class="text-blue-600">__________</u>，种植牙位为<u id="preview-tooth" class="text-blue-600">__________</u>，种植体数目为<u id="preview-implant-count" class="text-blue-600">__________</u>，医生已经向我详细介绍了整个治疗过程所需的时间和费用，我可以接受，我也同意医生在术中由于新发现的问题而改变原来的种植计划。</p>
+                        <p class="indent-8">5、我理解按口腔医学"种植失败"定义：在正常行使口腔功能的情况下，所出现的种植体松动、脱落、折断而需从骨内取出种植体（不包括外伤所致的种植体损害）。当种植失败时，医生可根据情况决定取出种植体及采取必要的治疗措施。</p>
+                        <p class="indent-8">6、我同意医生在治疗过程中照相、录像以及收集各种资料，医生可利用这些资料作为学术交流与研究，但不可公开身份。</p>
+                        <p class="indent-8">7、种植修复完成后，我将遵照医嘱，保证术后控制吸烟，注意饮食，避免咬过硬食物，坚持正确刷牙。保持口腔卫生，避免外伤，同时保证每半年到一年定期复查。</p>
+                        <p class="indent-8 font-medium">以上牙种植治疗知情同意书，患者已知情同意并签字。</p>
+                    </div>
+                    <!-- 签名区域预览 -->
+                    <div class="space-y-4 mb-6">
+                        <div class="flex items-center gap-4 border-b pb-4">
+                            <div class="w-28 text-sm">患者签名</div>
+                            <div class="flex-1 h-16 border rounded bg-gray-50 flex items-center justify-center">
+                                <img id="preview-patient-sign" class="max-h-14 hidden">
+                                <span id="preview-patient-placeholder" class="text-gray-400 text-sm">未签名</span>
+                            </div>
+                            <div class="w-32 text-sm text-gray-500" id="preview-patient-date"></div>
+                        </div>
+                        <div class="flex items-center gap-4 border-b pb-4">
+                            <div class="w-28 text-sm">亲属签名</div>
+                            <div class="flex-1 h-16 border rounded bg-gray-50 flex items-center justify-center">
+                                <img id="preview-guardian-sign" class="max-h-14 hidden">
+                                <span id="preview-guardian-placeholder" class="text-gray-400 text-sm">未签名</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-gray-500" id="preview-guardian-relation"></span>
+                                <span class="text-sm text-gray-500" id="preview-guardian-date"></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-28 text-sm">主治医生签名</div>
+                            <div class="flex-1 h-16 border rounded bg-gray-50 flex items-center justify-center">
+                                <img id="preview-doctor-sign" class="max-h-14 hidden">
+                                <span id="preview-doctor-placeholder" class="text-gray-400 text-sm">未签名</span>
+                            </div>
+                            <div class="w-32 text-sm text-gray-500" id="preview-doctor-date"></div>
+                        </div>
+                    </div>
+                    <!-- 审计信息 -->
+                    <div class="text-xs text-gray-400 border-t pt-4" id="preview-audit"></div>
+                    <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                        <button onclick="closeConsentPreview()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm">关闭</button>
+                        <button onclick="generateConsentPDF()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">生成PDF</button>
+                    </div>
                 </div>
             </div>
 

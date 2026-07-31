@@ -553,6 +553,67 @@ def init_database():
         )
     ''')
 
+    # v8.5.5: 知情同意书
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS informed_consents (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            consent_no CHAR(7) NOT NULL UNIQUE COMMENT '7位编号',
+            patient_name VARCHAR(50) NOT NULL,
+            patient_gender ENUM('男','女') NOT NULL,
+            patient_age INT,
+            implant_brand VARCHAR(100),
+            implant_model VARCHAR(100),
+            tooth_positions JSON COMMENT '选中牙位数组如[11,12,21]',
+            implant_count INT DEFAULT 1,
+            patient_signature_path VARCHAR(255) COMMENT '患者签名PNG路径',
+            patient_sign_date DATE,
+            patient_sign_ip VARCHAR(50),
+            guardian_signature_path VARCHAR(255) COMMENT '亲属签名PNG路径',
+            guardian_relation ENUM('父子','母子','父女','母女','兄弟','姐妹','其他监护人'),
+            guardian_sign_date DATE,
+            guardian_sign_ip VARCHAR(50),
+            doctor_signature_path VARCHAR(255) COMMENT '主治医生签名PNG路径',
+            doctor_sign_date DATE,
+            doctor_sign_ip VARCHAR(50),
+            pdf_path VARCHAR(255) COMMENT '生成PDF路径',
+            status ENUM('草稿','已完成','已作废') DEFAULT '草稿',
+            created_by VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # v8.5.5: 数据库迁移 - 确保知情同意书表字段完整
+    _migrate_consents_table(cursor)
+
     conn.commit()
     conn.close()
-    print('MySQL init done v8.5')
+    print('MySQL init done v8.5.5')
+
+
+def _migrate_consents_table(cursor):
+    """迁移知情同意书表结构 - 添加缺失字段"""
+    required_columns = [
+        ('implant_brand', 'VARCHAR(100)'),
+        ('implant_model', 'VARCHAR(100)'),
+        ('tooth_positions', 'JSON'),
+        ('implant_count', 'INT DEFAULT 1'),
+        ('patient_signature_path', 'VARCHAR(255)'),
+        ('patient_sign_date', 'DATE'),
+        ('patient_sign_ip', 'VARCHAR(50)'),
+        ('guardian_signature_path', 'VARCHAR(255)'),
+        ('guardian_relation', "ENUM('父子','母子','父女','母女','兄弟','姐妹','其他监护人')"),
+        ('guardian_sign_date', 'DATE'),
+        ('guardian_sign_ip', 'VARCHAR(50)'),
+        ('doctor_signature_path', 'VARCHAR(255)'),
+        ('doctor_sign_date', 'DATE'),
+        ('doctor_sign_ip', 'VARCHAR(50)'),
+        ('pdf_path', 'VARCHAR(255)'),
+        ('status', "ENUM('草稿','已完成','已作废') DEFAULT '草稿'"),
+        ('created_by', 'VARCHAR(50)'),
+    ]
+    for col_name, col_def in required_columns:
+        try:
+            cursor.execute(f'ALTER TABLE informed_consents ADD COLUMN {col_name} {col_def}')
+        except Exception:
+            pass  # 字段已存在或其他错误，忽略

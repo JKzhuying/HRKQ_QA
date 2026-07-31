@@ -37,6 +37,7 @@ from routes.auto_backup import auto_backup_bp, start_auto_backup_scheduler
 from routes.transfers import transfers_bp
 from routes.accounting import accounting_bp
 from routes.inventory import inventory_bp
+from routes.consents import consents_bp
 
 app.register_blueprint(settings_bp, url_prefix='/api/settings')
 app.register_blueprint(transactions_bp, url_prefix='/api/transactions')
@@ -48,6 +49,7 @@ app.register_blueprint(auto_backup_bp, url_prefix='/api/auto-backup')
 app.register_blueprint(transfers_bp, url_prefix='/api/transfers')
 app.register_blueprint(accounting_bp, url_prefix='/api/accounting')
 app.register_blueprint(inventory_bp, url_prefix='/api/inventory')
+app.register_blueprint(consents_bp, url_prefix='/api/consents')
 
 
 @app.before_request

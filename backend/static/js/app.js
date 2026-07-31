@@ -3530,3 +3530,519 @@ function loadInventoryWarnings(level) {
         }).join('');
     }).catch(function(e) { console.log(e); });
 }
+
+// ==================== 知情同意书 ====================
+
+var _consentCurrentPage = 1;
+var _selectedConsentId = null;
+var _selectedTeeth = [];
+var _currentSignType = null;
+
+// ---- 列表 ----
+
+function showConsentList() {
+    document.getElementById('consent-list-view').classList.remove('hidden');
+    document.getElementById('consent-form-view').classList.add('hidden');
+    loadConsents();
+}
+
+function showConsentForm() {
+    document.getElementById('consent-list-view').classList.add('hidden');
+    document.getElementById('consent-form-view').classList.remove('hidden');
+    resetConsentForm();
+}
+
+function resetConsentForm() {
+    _selectedConsentId = null;
+    _selectedTeeth = [];
+    document.getElementById('consent-id').value = '';
+    document.getElementById('consent-no').value = '';
+    document.getElementById('consent-display-no').textContent = '________';
+    document.getElementById('consent-display-date').textContent = formatDateYMD(new Date());
+    document.getElementById('consent-name').value = '';
+    document.getElementById('consent-gender').value = '';
+    document.getElementById('consent-age').value = '';
+    document.getElementById('consent-brand').value = '';
+    document.getElementById('consent-model').value = '';
+    document.getElementById('consent-tooth').value = '';
+    document.getElementById('consent-count').value = '1';
+    document.getElementById('consent-brand-display').textContent = '__________';
+    document.getElementById('consent-model-display').textContent = '__________';
+    document.getElementById('consent-tooth-display').textContent = '__________';
+    document.getElementById('consent-count-display').textContent = '__________';
+    document.getElementById('consent-guardian-relation').value = '';
+    document.getElementById('consent-complete-btn').classList.add('hidden');
+    _resetSignPreview('patient');
+    _resetSignPreview('guardian');
+    _resetSignPreview('doctor');
+}
+
+function _resetSignPreview(type) {
+    var textMap = { patient: '点击签名', guardian: '点击签名（可选）', doctor: '点击签名' };
+    var el = document.getElementById('consent-' + type + '-sign-text');
+    if (el) el.textContent = textMap[type];
+    var preview = document.getElementById('consent-' + type + '-sign-preview');
+    if (preview) { preview.style.backgroundImage = ''; preview.classList.remove('bg-white'); preview.classList.add('bg-gray-50'); }
+    var dateEl = document.getElementById('consent-' + type + '-sign-date');
+    if (dateEl) dateEl.textContent = '';
+}
+
+function formatDateYMD(d) {
+    var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return y + '年' + m + '月' + day + '日';
+}
+
+function loadConsents(page) {
+    page = page || _consentCurrentPage || 1;
+    _consentCurrentPage = page;
+    var keyword = document.getElementById('consent-keyword') ? document.getElementById('consent-keyword').value : '';
+    var status = document.getElementById('consent-status') ? document.getElementById('consent-status').value : '';
+    var params = new URLSearchParams();
+    params.append('page', page); params.append('page_size', 20);
+    if (keyword) params.append('keyword', keyword);
+    if (status) params.append('status', status);
+
+    api('/api/consents/?' + params.toString()).then(function(res) {
+        if (res.code !== 200) return;
+        var tbody = document.getElementById('consent-list-body');
+        var items = res.data.items || [];
+        if (items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-gray-400">暂无记录</td></tr>';
+            document.getElementById('consent-pagination').innerHTML = '';
+            return;
+        }
+        var toothNames = {
+            11:'右上1',12:'右上2',13:'右上3',14:'右上4',15:'右上5',16:'右上6',17:'右上7',18:'右上8',
+            21:'左上1',22:'左上2',23:'左上3',24:'左上4',25:'左上5',26:'左上6',27:'左上7',28:'左上8',
+            31:'左下1',32:'左下2',33:'左下3',34:'左下4',35:'左下5',36:'左下6',37:'左下7',38:'左下8',
+            41:'右下1',42:'右下2',43:'右下3',44:'右下4',45:'右下5',46:'右下6',47:'右下7',48:'右下8',
+        };
+        tbody.innerHTML = items.map(function(r) {
+            // v8.5.5-fix2: 患者或家属签了 + 医生签了 = 已签名
+            var hasPatientOrGuardian = r.patient_signature_path || r.guardian_signature_path;
+            var hasDoctor = r.doctor_signature_path;
+            var signStatus = '';
+            if (hasPatientOrGuardian && hasDoctor) signStatus = '<span class="text-emerald-600 font-medium">已签名</span>';
+            else if (hasPatientOrGuardian || hasDoctor) signStatus = '<span class="text-orange-500">部分签名</span>';
+            else signStatus = '<span class="text-gray-400">未签名</span>';
+            var toothStr = (r.tooth_positions || []).map(function(t) { return toothNames[t] || t; }).join('、');
+            var previewBtn = '<button onclick="previewConsentFromList(' + r.id + ')" class="text-blue-500 hover:text-blue-700 text-xs">预览</button>';
+            var pdfBtn = r.pdf_path ? '<a href="/api/consents/' + r.id + '/pdf" target="_blank" class="text-blue-500 hover:underline text-xs">下载</a>' : '<span class="text-gray-300 text-xs">-</span>';
+            return '<tr class="hover:bg-gray-50">' +
+                '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + (r.consent_no || '') + '</td>' +
+                '<td class="px-4 py-3 font-medium">' + (r.patient_name || '') + '</td>' +
+                '<td class="px-4 py-3 text-center text-gray-600">' + (r.patient_gender || '') + ' / ' + (r.patient_age || '-') + '</td>' +
+                '<td class="px-4 py-3 text-gray-600">' + (r.implant_brand || '-') + '</td>' +
+                '<td class="px-4 py-3 text-gray-600 text-xs">' + toothStr + '</td>' +
+                '<td class="px-4 py-3 text-center text-xs">' + signStatus + '</td>' +
+                '<td class="px-4 py-3 text-center">' + previewBtn + '</td>' +
+                '<td class="px-4 py-3 text-center">' + pdfBtn + '</td>' +
+                '<td class="px-4 py-3 text-center">' +
+                    '<button onclick="editConsent(' + r.id + ')" class="text-blue-500 hover:text-blue-700 text-xs mr-2">编辑</button>' +
+                    '<button onclick="deleteConsent(' + r.id + ')" class="text-red-400 hover:text-red-600 text-xs">作废</button>' +
+                '</td></tr>';
+        }).join('');
+
+        var total = res.data.total || 0, pageSize = res.data.page_size || 20, totalPages = Math.ceil(total / pageSize);
+        var pgHtml = '<span class="text-sm text-gray-500">共 ' + total + ' 条</span><div class="flex gap-1">';
+        for (var i = 1; i <= totalPages; i++) {
+            pgHtml += '<button onclick="loadConsents(' + i + ')" class="px-2 py-1 text-xs rounded ' + (i === page ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200') + '">' + i + '</button>';
+        }
+        pgHtml += '</div>';
+        document.getElementById('consent-pagination').innerHTML = pgHtml;
+    }).catch(function(e) { console.log(e); });
+}
+
+function saveConsentDraft() {
+    var data = _collectConsentData();
+    if (!data.patient_name) { alert('患者姓名不能为空'); return; }
+    if (!data.patient_gender) { alert('性别不能为空'); return; }
+
+    var url = '/api/consents/';
+    var method = 'POST';
+    if (_selectedConsentId) { url = '/api/consents/' + _selectedConsentId; method = 'PUT'; }
+
+    api(url, { method: method, body: JSON.stringify(data) }).then(function(res) {
+        if (res.code === 200) {
+            if (!_selectedConsentId && res.data && res.data.id) {
+                _selectedConsentId = res.data.id;
+                document.getElementById('consent-id').value = res.data.id;
+                document.getElementById('consent-no').value = res.data.consent_no;
+                document.getElementById('consent-display-no').textContent = res.data.consent_no;
+                document.getElementById('consent-preview-btn').classList.remove('hidden');
+            }
+            alert('保存成功');
+            loadConsents();
+        } else { alert(res.message || '保存失败'); }
+    }).catch(function(e) { alert('保存失败: ' + e.message); });
+}
+
+function _collectConsentData() {
+    return {
+        patient_name: document.getElementById('consent-name').value.trim(),
+        patient_gender: document.getElementById('consent-gender').value,
+        patient_age: document.getElementById('consent-age').value || null,
+        implant_brand: document.getElementById('consent-brand').value || null,
+        implant_model: document.getElementById('consent-model').value || null,
+        tooth_positions: _selectedTeeth,
+        implant_count: parseInt(document.getElementById('consent-count').value) || 1,
+    };
+}
+
+function editConsent(id) {
+    api('/api/consents/' + id).then(function(res) {
+        if (res.code !== 200) { alert('加载失败'); return; }
+        var r = res.data;
+        _selectedConsentId = r.id;
+        _selectedTeeth = r.tooth_positions || [];
+        showConsentForm();
+        document.getElementById('consent-id').value = r.id;
+        document.getElementById('consent-no').value = r.consent_no;
+        document.getElementById('consent-display-no').textContent = r.consent_no;
+        document.getElementById('consent-display-date').textContent = formatDateYMD(new Date(r.created_at));
+        document.getElementById('consent-name').value = r.patient_name || '';
+        document.getElementById('consent-gender').value = r.patient_gender || '';
+        document.getElementById('consent-age').value = r.patient_age || '';
+        document.getElementById('consent-brand').value = r.implant_brand || '';
+        document.getElementById('consent-model').value = r.implant_model || '';
+        document.getElementById('consent-count').value = r.implant_count || 1;
+        document.getElementById('consent-tooth').value = _selectedTeeth.join(', ');
+        document.getElementById('consent-brand-display').textContent = r.implant_brand || '__________';
+        document.getElementById('consent-model-display').textContent = r.implant_model || '__________';
+        document.getElementById('consent-tooth-display').textContent = _selectedTeeth.length > 0 ? _selectedTeeth.join(', ') : '__________';
+        document.getElementById('consent-count-display').textContent = r.implant_count || '__________';
+        document.getElementById('consent-guardian-relation').value = r.guardian_relation || '';
+        document.getElementById('consent-preview-btn').classList.remove('hidden');
+        // 签名预览
+        _loadSignPreview('patient', r.patient_signature_path, r.patient_sign_date);
+        _loadSignPreview('guardian', r.guardian_signature_path, r.guardian_sign_date);
+        _loadSignPreview('doctor', r.doctor_signature_path, r.doctor_sign_date);
+        // v8.5.5-fix5: 检查是否满足完成条件
+        _checkCompleteBtn(r);
+    }).catch(function() { alert('加载失败'); });
+}
+
+function _checkCompleteBtn(r) {
+    // 患者或家属签了 + 医生签了 = 显示完成按钮
+    var hasPatientOrGuardian = r.patient_signature_path || r.guardian_signature_path;
+    var hasDoctor = r.doctor_signature_path;
+    var btn = document.getElementById('consent-complete-btn');
+    if (hasPatientOrGuardian && hasDoctor && r.status !== '已完成') {
+        btn.classList.remove('hidden');
+    } else {
+        btn.classList.add('hidden');
+    }
+}
+
+function _loadSignPreview(type, path, signDate) {
+    if (!path) return;
+    var fname = path.split('/').pop();
+    var el = document.getElementById('consent-' + type + '-sign-text');
+    if (el) el.textContent = '';
+    var preview = document.getElementById('consent-' + type + '-sign-preview');
+    if (preview) {
+        preview.classList.remove('bg-gray-50');
+        preview.classList.add('bg-white');
+        preview.style.backgroundImage = 'url(/uploads/consents/' + document.getElementById('consent-no').value + '/' + fname + ')';
+        preview.style.backgroundSize = 'contain';
+        preview.style.backgroundRepeat = 'no-repeat';
+        preview.style.backgroundPosition = 'center';
+    }
+    var dateEl = document.getElementById('consent-' + type + '-sign-date');
+    if (dateEl && signDate) dateEl.textContent = formatDate(signDate);
+}
+
+function deleteConsent(id) {
+    if (!confirm('确定作废这条记录？')) return;
+    api('/api/consents/' + id, { method: 'DELETE' }).then(function(res) {
+        if (res.code === 200) { loadConsents(); }
+        else { alert(res.message || '操作失败'); }
+    }).catch(function(e) { alert('失败: ' + e.message); });
+}
+
+// v8.5.5-fix3: A4预览
+function previewConsentFromList(id) {
+    _selectedConsentId = id;
+    previewConsent();
+}
+
+function previewConsent() {
+    if (!_selectedConsentId) { alert('请先保存同意书'); return; }
+    api('/api/consents/' + _selectedConsentId).then(function(res) {
+        if (res.code !== 200) { alert('加载失败'); return; }
+        var r = res.data;
+        // 填充预览数据
+        document.getElementById('preview-no').textContent = r.consent_no || '________';
+        document.getElementById('preview-display-no').textContent = r.consent_no || '________';
+        document.getElementById('preview-date').textContent = formatDateYMD(new Date(r.created_at));
+        document.getElementById('preview-name').textContent = r.patient_name || '';
+        document.getElementById('preview-gender').textContent = r.patient_gender || '';
+        document.getElementById('preview-age').textContent = r.patient_age || '';
+        document.getElementById('preview-brand').textContent = r.implant_brand || '__________';
+        document.getElementById('preview-model').textContent = r.implant_model || '__________';
+        var tp = r.tooth_positions || [];
+        var toothNames = {11:'右上1',12:'右上2',13:'右上3',14:'右上4',15:'右上5',16:'右上6',17:'右上7',18:'右上8',21:'左上1',22:'左上2',23:'左上3',24:'左上4',25:'左上5',26:'左上6',27:'左上7',28:'左上8',31:'左下1',32:'左下2',33:'左下3',34:'左下4',35:'左下5',36:'左下6',37:'左下7',38:'左下8',41:'右下1',42:'右下2',43:'右下3',44:'右下4',45:'右下5',46:'右下6',47:'右下7',48:'右下8'};
+        document.getElementById('preview-tooth').textContent = tp.length > 0 ? tp.map(function(t){return toothNames[t]||t;}).join('、') : '__________';
+        document.getElementById('preview-implant-count').textContent = r.implant_count || '__________';
+        // 签名
+        _fillPreviewSign('patient', r.patient_signature_path, r.patient_sign_date);
+        _fillPreviewSign('guardian', r.guardian_signature_path, r.guardian_sign_date);
+        document.getElementById('preview-guardian-relation').textContent = r.guardian_relation || '';
+        _fillPreviewSign('doctor', r.doctor_signature_path, r.doctor_sign_date);
+        // 审计信息
+        var audit = [];
+        if (r.patient_sign_ip) audit.push('患者签名IP: ' + r.patient_sign_ip);
+        if (r.guardian_sign_ip) audit.push('亲属签名IP: ' + r.guardian_sign_ip);
+        if (r.doctor_sign_ip) audit.push('医生签名IP: ' + r.doctor_sign_ip);
+        document.getElementById('preview-audit').textContent = audit.join(' | ');
+        document.getElementById('consent-preview-modal').classList.remove('hidden');
+    }).catch(function() { alert('加载失败'); });
+}
+
+function _fillPreviewSign(type, path, signDate) {
+    var img = document.getElementById('preview-' + type + '-sign');
+    var placeholder = document.getElementById('preview-' + type + '-placeholder');
+    var dateEl = document.getElementById('preview-' + type + '-date');
+    if (path) {
+        var fname = path.split('/').pop();
+        var no = document.getElementById('preview-no').textContent;
+        img.src = '/uploads/consents/' + no + '/' + fname;
+        img.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+    } else {
+        img.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+    }
+    if (dateEl && signDate) dateEl.textContent = formatDate(signDate);
+}
+
+function closeConsentPreview() {
+    document.getElementById('consent-preview-modal').classList.add('hidden');
+}
+
+// v8.5.5-fix5: 完成归档
+function completeConsent() {
+    if (!_selectedConsentId) { alert('请先保存同意书'); return; }
+    if (!confirm('确认完成归档？将生成PDF并锁定记录。')) return;
+    var btn = document.getElementById('consent-complete-btn');
+    btn.textContent = '归档中...'; btn.disabled = true;
+    api('/api/consents/' + _selectedConsentId + '/complete', { method: 'POST' }).then(function(res) {
+        btn.textContent = '完成归档'; btn.disabled = false;
+        if (res.code === 200) {
+            alert('归档成功');
+            btn.classList.add('hidden');
+            loadConsents();
+        } else { alert(res.message || '归档失败'); }
+    }).catch(function(e) { btn.textContent = '完成归档'; btn.disabled = false; alert('归档失败: ' + e.message); });
+}
+
+function generateConsentPDF() {
+    if (!_selectedConsentId) { alert('请先保存同意书'); return; }
+    var btn = document.getElementById('consent-preview-btn');
+    btn.textContent = '生成中...'; btn.disabled = true;
+    api('/api/consents/' + _selectedConsentId + '/pdf', { method: 'POST' }).then(function(res) {
+        btn.textContent = '生成PDF'; btn.disabled = false;
+        if (res.code === 200) {
+            alert('PDF生成成功');
+            window.open('/api/consents/' + _selectedConsentId + '/pdf', '_blank');
+            loadConsents();
+        } else { alert(res.message || '生成失败'); }
+    }).catch(function(e) { btn.textContent = '生成PDF'; btn.disabled = false; alert('生成失败: ' + e.message); });
+}
+
+// ---- 牙位选择 ----
+
+function initToothSelector() {
+    var upperRow = document.getElementById('tooth-upper-row');
+    var lowerRow = document.getElementById('tooth-lower-row');
+    if (!upperRow || upperRow.children.length > 0) return;
+
+    // 上排：右上18-41 左上21-28
+    var upperHtml = '<div class="flex gap-1">';
+    [18,17,16,15,14,13,12,11].forEach(function(t) {
+        upperHtml += '<button class="tooth-btn w-8 h-10 border rounded text-xs flex items-center justify-center hover:bg-blue-50" data-tooth="' + t + '" onclick="toggleTooth(' + t + ')">' + t + '</button>';
+    });
+    upperHtml += '</div><div class="w-4"></div><div class="flex gap-1">';
+    [21,22,23,24,25,26,27,28].forEach(function(t) {
+        upperHtml += '<button class="tooth-btn w-8 h-10 border rounded text-xs flex items-center justify-center hover:bg-blue-50" data-tooth="' + t + '" onclick="toggleTooth(' + t + ')">' + t + '</button>';
+    });
+    upperHtml += '</div>';
+    upperRow.innerHTML = upperHtml;
+
+    // 下排：右下48-41 左下31-38
+    var lowerHtml = '<div class="flex gap-1">';
+    [48,47,46,45,44,43,42,41].forEach(function(t) {
+        lowerHtml += '<button class="tooth-btn w-8 h-10 border rounded text-xs flex items-center justify-center hover:bg-blue-50" data-tooth="' + t + '" onclick="toggleTooth(' + t + ')">' + t + '</button>';
+    });
+    lowerHtml += '</div><div class="w-4"></div><div class="flex gap-1">';
+    [31,32,33,34,35,36,37,38].forEach(function(t) {
+        lowerHtml += '<button class="tooth-btn w-8 h-10 border rounded text-xs flex items-center justify-center hover:bg-blue-50" data-tooth="' + t + '" onclick="toggleTooth(' + t + ')">' + t + '</button>';
+    });
+    lowerHtml += '</div>';
+    lowerRow.innerHTML = lowerHtml;
+}
+
+function openToothSelector() {
+    initToothSelector();
+    document.getElementById('tooth-selector-modal').classList.remove('hidden');
+    _updateToothSelectionUI();
+}
+
+function closeToothSelector() {
+    document.getElementById('tooth-selector-modal').classList.add('hidden');
+}
+
+function toggleTooth(tooth) {
+    var idx = _selectedTeeth.indexOf(tooth);
+    if (idx >= 0) _selectedTeeth.splice(idx, 1);
+    else _selectedTeeth.push(tooth);
+    _selectedTeeth.sort(function(a,b){return a-b;});
+    _updateToothSelectionUI();
+}
+
+function _updateToothSelectionUI() {
+    document.querySelectorAll('.tooth-btn').forEach(function(btn) {
+        var t = parseInt(btn.dataset.tooth);
+        if (_selectedTeeth.indexOf(t) >= 0) {
+            btn.classList.add('bg-blue-500', 'text-white');
+            btn.classList.remove('hover:bg-blue-50');
+        } else {
+            btn.classList.remove('bg-blue-500', 'text-white');
+            btn.classList.add('hover:bg-blue-50');
+        }
+    });
+    var names = {11:'右上1',12:'右上2',13:'右上3',14:'右上4',15:'右上5',16:'右上6',17:'右上7',18:'右上8',21:'左上1',22:'左上2',23:'左上3',24:'左上4',25:'左上5',26:'左上6',27:'左上7',28:'左上8',31:'左下1',32:'左下2',33:'左下3',34:'左下4',35:'左下5',36:'左下6',37:'左下7',38:'左下8',41:'右下1',42:'右下2',43:'右下3',44:'右下4',45:'右下5',46:'右下6',47:'右下7',48:'右下8'};
+    var display = _selectedTeeth.map(function(t){return names[t]||t;}).join('、') || '无';
+    document.getElementById('tooth-selected-display').textContent = display;
+}
+
+function confirmToothSelection() {
+    document.getElementById('consent-tooth').value = _selectedTeeth.join(', ');
+    document.getElementById('consent-tooth-display').textContent = _selectedTeeth.length > 0 ? _selectedTeeth.join(', ') : '__________';
+    closeToothSelector();
+}
+
+function clearToothSelection() {
+    _selectedTeeth = [];
+    _updateToothSelectionUI();
+}
+
+// ---- 电子签名 ----
+
+var _signPadCtx = null;
+var _signPadDrawing = false;
+var _signPadLastX = 0, _signPadLastY = 0;
+
+function openSignPad(type) {
+    if (!_selectedConsentId) { alert('请先保存同意书'); return; }
+    _currentSignType = type;
+    var titles = { patient: '患者签名', guardian: '亲属签名', doctor: '主治医生签名' };
+    document.getElementById('sign-pad-title').textContent = titles[type] || '电子签名';
+    document.getElementById('sign-pad-modal').classList.remove('hidden');
+    _initSignPadCanvas();
+}
+
+function closeSignPad() {
+    document.getElementById('sign-pad-modal').classList.add('hidden');
+    _currentSignType = null;
+}
+
+function _initSignPadCanvas() {
+    var canvas = document.getElementById('sign-pad-canvas');
+    if (!canvas) return;
+    _signPadCtx = canvas.getContext('2d');
+    _signPadCtx.strokeStyle = '#000';
+    _signPadCtx.lineWidth = 2;
+    _signPadCtx.lineCap = 'round';
+    _signPadCtx.lineJoin = 'round';
+
+    // 清除之前的事件
+    canvas.onmousedown = null; canvas.onmousemove = null; canvas.onmouseup = null;
+    canvas.ontouchstart = null; canvas.ontouchmove = null; canvas.ontouchend = null;
+
+    canvas.onmousedown = function(e) {
+        _signPadDrawing = true;
+        var rect = canvas.getBoundingClientRect();
+        _signPadLastX = e.clientX - rect.left;
+        _signPadLastY = e.clientY - rect.top;
+    };
+    canvas.onmousemove = function(e) {
+        if (!_signPadDrawing) return;
+        var rect = canvas.getBoundingClientRect();
+        var x = e.clientX - rect.left, y = e.clientY - rect.top;
+        _signPadCtx.beginPath();
+        _signPadCtx.moveTo(_signPadLastX, _signPadLastY);
+        _signPadCtx.lineTo(x, y);
+        _signPadCtx.stroke();
+        _signPadLastX = x; _signPadLastY = y;
+    };
+    canvas.onmouseup = function() { _signPadDrawing = false; };
+    canvas.onmouseleave = function() { _signPadDrawing = false; };
+
+    // 触摸支持
+    canvas.ontouchstart = function(e) {
+        e.preventDefault();
+        var touch = e.touches[0];
+        var rect = canvas.getBoundingClientRect();
+        _signPadDrawing = true;
+        _signPadLastX = touch.clientX - rect.left;
+        _signPadLastY = touch.clientY - rect.top;
+    };
+    canvas.ontouchmove = function(e) {
+        e.preventDefault();
+        if (!_signPadDrawing) return;
+        var touch = e.touches[0];
+        var rect = canvas.getBoundingClientRect();
+        var x = touch.clientX - rect.left, y = touch.clientY - rect.top;
+        _signPadCtx.beginPath();
+        _signPadCtx.moveTo(_signPadLastX, _signPadLastY);
+        _signPadCtx.lineTo(x, y);
+        _signPadCtx.stroke();
+        _signPadLastX = x; _signPadLastY = y;
+    };
+    canvas.ontouchend = function() { _signPadDrawing = false; };
+}
+
+function clearSignPad() {
+    var canvas = document.getElementById('sign-pad-canvas');
+    if (_signPadCtx && canvas) {
+        _signPadCtx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+function saveSignPad() {
+    var canvas = document.getElementById('sign-pad-canvas');
+    if (!canvas || !_currentSignType) return;
+    // 检查是否为空（简单检查：是否有非白色像素）
+    var imageData = _signPadCtx.getImageData(0, 0, canvas.width, canvas.height).data;
+    var hasPixel = false;
+    for (var i = 3; i < imageData.length; i += 4) {
+        if (imageData[i] > 0) { hasPixel = true; break; }
+    }
+    if (!hasPixel) { alert('请先签名'); return; }
+
+    var base64 = canvas.toDataURL('image/png');
+    var bodyData = { sign_type: _currentSignType, signature: base64 };
+    if (_currentSignType === 'guardian') {
+        bodyData.guardian_relation = document.getElementById('consent-guardian-relation').value;
+    }
+
+    api('/api/consents/' + _selectedConsentId + '/sign', {
+        method: 'POST',
+        body: JSON.stringify(bodyData)
+    }).then(function(res) {
+        if (res.code === 200) {
+            closeSignPad();
+            // 刷新签名预览
+            api('/api/consents/' + _selectedConsentId).then(function(r2) {
+                if (r2.code === 200) {
+                    var rd = r2.data;
+                    _loadSignPreview('patient', rd.patient_signature_path, rd.patient_sign_date);
+                    _loadSignPreview('guardian', rd.guardian_signature_path, rd.guardian_sign_date);
+                    _loadSignPreview('doctor', rd.doctor_signature_path, rd.doctor_sign_date);
+                    if (rd.status === '已完成') alert('所有签名已完成，可以生成PDF了');
+                }
+            });
+        } else { alert(res.message || '保存失败'); }
+    }).catch(function(e) { alert('保存失败: ' + e.message); });
+}
