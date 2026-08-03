@@ -1,0 +1,9 @@
+Flask==3.0.3
+Flask-CORS==4.0.1
+openpyxl==3.1.2
+Werkzeug==3.0.3
+PyMySQL==1.1.0
+cryptography==42.0.7
+APScheduler==3.10.4
+reportlab==4.2.0
+Pillow==10.3.0

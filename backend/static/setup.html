@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>口腔诊所财务管理系统 - 首次安装</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#059669',
+                        'primary-dark': '#047857',
+                        sidebar: '#0f172a',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .step-panel { animation: fadeIn 0.35s ease-out; }
+        @keyframes spin-slow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .animate-spin-slow { animation: spin-slow 2s linear infinite; }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px #05966940, 0 0 20px #05966920; }
+            50% { box-shadow: 0 0 15px #05966960, 0 0 30px #05966940; }
+        }
+        .glow-bar { animation: pulse-glow 2s ease-in-out infinite; }
+        @keyframes scanline {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .scan-overlay {
+            background: repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(255,255,255,0.06) 8px, rgba(255,255,255,0.06) 9px);
+        }
+        .step-active { background: linear-gradient(135deg, #059669, #047857); color: white; border-color: #059669; }
+        .step-done { background: #d1fae5; color: #059669; border-color: #059669; }
+        .step-pending { background: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; }
+        .input-focus:focus { outline: none; border-color: #059669; box-shadow: 0 0 0 3px rgba(5,150,105,0.15); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-lg">
+        <!-- Logo & Title -->
+        <div class="text-center mb-8">
+            <div class="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/20">
+                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h1 class="text-xl font-bold text-gray-900">口腔诊所财务管理系统</h1>
+            <p class="text-sm text-gray-500 mt-1">首次安装向导</p>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+            <!-- Step Indicator -->
+            <div class="px-6 pt-6 pb-2">
+                <div class="flex items-center justify-center gap-3">
+                    <div id="step-dot-1" class="step-active w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all">1</div>
+                    <div id="step-line-1" class="flex-1 h-0.5 bg-gray-200 transition-colors"></div>
+                    <div id="step-dot-2" class="step-pending w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all">2</div>
+                    <div id="step-line-2" class="flex-1 h-0.5 bg-gray-200 transition-colors"></div>
+                    <div id="step-dot-3" class="step-pending w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all">3</div>
+                </div>
+                <div class="flex justify-between mt-2 text-xs text-gray-400">
+                    <span id="step-label-1" class="text-center flex-1 text-primary font-medium">连接数据库</span>
+                    <span id="step-label-2" class="text-center flex-1">自动安装</span>
+                    <span id="step-label-3" class="text-center flex-1">安装完成</span>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="p-6 min-h-[320px]">
+                <!-- ===== STEP 1: Connection ===== -->
+                <div id="panel-step-1" class="step-panel">
+                    <h2 class="text-lg font-bold text-gray-900 mb-1">连接数据库</h2>
+                    <p class="text-sm text-gray-500 mb-5">请输入 MySQL 管理员(root)密码，系统将自动完成后续配置</p>
+
+                    <div class="space-y-4">
+                        <!-- Host & Port -->
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="col-span-2">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">服务器地址</label>
+                                <input type="text" id="db-host" value="localhost" class="input-focus w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">端口</label>
+                                <input type="number" id="db-port" value="3306" class="input-focus w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Root User -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">管理员账号</label>
+                            <input type="text" id="db-root-user" value="root" class="input-focus w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm">
+                        </div>
+
+                        <!-- Root Password -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">管理员密码 <span class="text-red-400">*</span> <span class="text-gray-400 font-normal">（仅使用一次，不会保存）</span></label>
+                            <div class="relative">
+                                <input type="password" id="db-root-password" placeholder="请输入 MySQL root 密码" class="input-focus w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm pr-10">
+                                <button type="button" onclick="togglePassword()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1">
+                                    <svg id="eye-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Error Tip -->
+                        <div id="error-tip" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                            <div class="flex items-start gap-2">
+                                <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <div id="error-text">连接失败</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-6 flex gap-3">
+                        <button id="btn-test" onclick="testConnection()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                            测试连接
+                        </button>
+                        <button id="btn-next-1" onclick="goStep2()" disabled class="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg opacity-50 cursor-not-allowed transition-all text-sm font-medium">
+                            下一步
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ===== STEP 2: Installing ===== -->
+                <div id="panel-step-2" class="step-panel hidden text-center">
+                    <h2 class="text-lg font-bold text-gray-900 mb-1">自动创建数据库环境</h2>
+                    <p class="text-sm text-gray-500 mb-6">系统正在自动完成安装，请稍候...</p>
+
+                    <!-- Progress Log -->
+                    <div class="text-left space-y-3 mb-6 min-h-[160px]">
+                        <div id="log-1" class="flex items-center gap-3 text-sm text-gray-400 transition-colors">
+                            <div class="log-spinner w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin flex-shrink-0"></div>
+                            <span>创建数据库 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">dental_finance</code></span>
+                        </div>
+                        <div id="log-2" class="flex items-center gap-3 text-sm text-gray-400 transition-colors">
+                            <div class="log-spinner w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin flex-shrink-0"></div>
+                            <span>生成安全凭证并创建数据库用户</span>
+                        </div>
+                        <div id="log-3" class="flex items-center gap-3 text-sm text-gray-400 transition-colors">
+                            <div class="log-spinner w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin flex-shrink-0"></div>
+                            <span>加密保存配置到本地</span>
+                        </div>
+                        <div id="log-4" class="flex items-center gap-3 text-sm text-gray-400 transition-colors">
+                            <div class="log-spinner w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin flex-shrink-0"></div>
+                            <span>初始化数据表结构和默认数据</span>
+                        </div>
+                    </div>
+
+                    <!-- Sci-Fi Progress Bar -->
+                    <div class="relative mb-6">
+                        <div class="h-3 bg-gray-100 rounded-full overflow-hidden" style="box-shadow: inset 0 0 6px rgba(0,0,0,0.08);">
+                            <div id="install-progress" class="h-full rounded-full transition-all duration-700 ease-out glow-bar" style="width: 0%; background: linear-gradient(90deg, #047857, #059669, #34d399);"></div>
+                        </div>
+                        <div class="scan-overlay absolute inset-0 rounded-full pointer-events-none"></div>
+                        <div class="flex justify-between mt-2 text-xs text-gray-500">
+                            <span id="install-percent" class="font-mono text-primary font-medium">0%</span>
+                            <span id="install-status">准备中...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== STEP 3: Complete ===== -->
+                <div id="panel-step-3" class="step-panel hidden text-center">
+                    <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-gray-900 mb-1">安装成功</h2>
+                    <p class="text-sm text-gray-500 mb-6">系统已完成初始化，可以开始使用了</p>
+
+                    <div class="bg-gray-50 rounded-xl p-4 text-left text-sm space-y-2 mb-6">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">数据库</span>
+                            <span class="font-mono text-gray-900" id="result-db-name">dental_finance</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">数据库用户</span>
+                            <span class="font-mono text-gray-900" id="result-db-user">--</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">配置位置</span>
+                            <span class="font-mono text-gray-900 text-xs">~/.dental-finance/config.enc</span>
+                        </div>
+                        <div class="pt-2 border-t border-gray-200 mt-2">
+                            <p class="text-xs text-amber-600 flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                本机专属加密配置，迁移服务器需重新安装
+                            </p>
+                        </div>
+                    </div>
+
+                    <button onclick="enterSystem()" class="w-full px-5 py-3 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all text-sm font-medium flex items-center justify-center gap-2">
+                        <span>进入财务管理系统</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-xs text-gray-400 mt-6">牙科财务管理系统 v9.0 | 安全安装模式</p>
+    </div>
+
+    <script>
+        // ===== State =====
+        let currentStep = 1;
+        let connectionTested = false;
+        let installData = {};
+
+        // ===== Helper =====
+        function $(id) { return document.getElementById(id); }
+
+        function showPanel(step) {
+            for (let i = 1; i <= 3; i++) {
+                $('panel-step-' + i).classList.add('hidden');
+            }
+            $('panel-step-' + step).classList.remove('hidden');
+            currentStep = step;
+            updateStepIndicator();
+        }
+
+        function updateStepIndicator() {
+            for (let i = 1; i <= 3; i++) {
+                const dot = $('step-dot-' + i);
+                const label = $('step-label-' + i);
+                const line = $('step-line-' + i);
+
+                dot.classList.remove('step-active', 'step-done', 'step-pending');
+                label.classList.remove('text-primary', 'font-medium');
+
+                if (i < currentStep) {
+                    dot.classList.add('step-done');
+                    dot.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
+                    label.classList.add('text-primary');
+                    if (line) line.classList.add('bg-primary');
+                } else if (i === currentStep) {
+                    dot.classList.add('step-active');
+                    dot.textContent = i;
+                    label.classList.add('text-primary', 'font-medium');
+                    if (line) line.classList.remove('bg-primary');
+                } else {
+                    dot.classList.add('step-pending');
+                    dot.textContent = i;
+                    if (line) line.classList.remove('bg-primary');
+                }
+            }
+        }
+
+        function togglePassword() {
+            const input = $('db-root-password');
+            const icon = $('eye-icon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>';
+            } else {
+                input.type = 'password';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
+            }
+        }
+
+        function showError(msg) {
+            $('error-tip').classList.remove('hidden');
+            $('error-text').textContent = msg;
+        }
+        function hideError() {
+            $('error-tip').classList.add('hidden');
+        }
+
+        function setBtnLoading(btnId, loading) {
+            const btn = $(btnId);
+            if (loading) {
+                btn.disabled = true;
+                btn.innerHTML = '<svg class="w-4 h-4 animate-spin inline mr-1" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> 检测中...';
+            } else {
+                btn.disabled = false;
+                btn.textContent = '测试连接';
+            }
+        }
+
+        // ===== Step 1: Test Connection =====
+        async function testConnection() {
+            hideError();
+            const host = $('db-host').value.trim();
+            const port = parseInt($('db-port').value) || 3306;
+            const rootUser = $('db-root-user').value.trim();
+            const rootPassword = $('db-root-password').value;
+
+            if (!rootPassword) {
+                showError('请输入 MySQL 管理员密码');
+                return;
+            }
+
+            setBtnLoading('btn-test', true);
+
+            try {
+                const res = await fetch('/api/setup/test-connection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ host, port, root_user: rootUser, root_password: rootPassword })
+                });
+                const data = await res.json();
+
+                if (data.code === 200) {
+                    connectionTested = true;
+                    installData = { host, port, root_user: rootUser, root_password: rootPassword };
+                    $('btn-next-1').disabled = false;
+                    $('btn-next-1').classList.remove('opacity-50', 'cursor-not-allowed');
+                    $('btn-next-1').classList.add('hover:bg-primary-dark');
+                    showError('');
+                    $('error-tip').classList.remove('hidden');
+                    $('error-tip').className = 'bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-700';
+                    $('error-tip').innerHTML = '<div class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><div>连接成功！MySQL ' + (data.data?.version || '') + '</div></div>';
+                } else {
+                    showError(data.message || '连接失败');
+                }
+            } catch (err) {
+                showError('请求失败: ' + (err.message || '网络异常'));
+            }
+
+            setBtnLoading('btn-test', false);
+        }
+
+        function goStep2() {
+            if (!connectionTested) return;
+            showPanel(2);
+            startInstall();
+        }
+
+        // ===== Step 2: Auto Install =====
+        async function startInstall() {
+            const steps = [
+                { id: 'log-1', pct: 15, status: '创建数据库...' },
+                { id: 'log-2', pct: 40, status: '创建安全用户...' },
+                { id: 'log-3', pct: 60, status: '保存加密配置...' },
+                { id: 'log-4', pct: 85, status: '初始化数据表...' },
+            ];
+
+            // Animate progress
+            steps.forEach((step, idx) => {
+                setTimeout(() => {
+                    const el = $(step.id);
+                    el.classList.remove('text-gray-400');
+                    el.classList.add('text-primary', 'font-medium');
+                    el.querySelector('.log-spinner').classList.add('border-t-primary');
+                    $('install-progress').style.width = step.pct + '%';
+                    $('install-percent').textContent = step.pct + '%';
+                    $('install-status').textContent = step.status;
+                }, idx * 400);
+            });
+
+            // Call API
+            try {
+                const res = await fetch('/api/setup/install', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(installData)
+                });
+                const data = await res.json();
+
+                if (data.code === 200) {
+                    // Mark all steps done
+                    steps.forEach(step => {
+                        const el = $(step.id);
+                        el.querySelector('.log-spinner').classList.remove('animate-spin', 'border-t-primary');
+                        el.querySelector('.log-spinner').classList.add('bg-emerald-500');
+                        el.querySelector('.log-spinner').innerHTML = '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
+                        el.classList.remove('text-primary');
+                        el.classList.add('text-emerald-700');
+                    });
+                    $('install-progress').style.width = '100%';
+                    $('install-percent').textContent = '100%';
+                    $('install-status').textContent = '安装完成';
+
+                    // Show result
+                    $('result-db-user').textContent = data.data?.user || '--';
+
+                    setTimeout(() => showPanel(3), 800);
+                } else {
+                    $('install-status').textContent = '安装失败';
+                    $('install-status').classList.add('text-red-600');
+                    // Show error on last step
+                    const lastLog = $('log-4');
+                    lastLog.classList.remove('text-gray-400');
+                    lastLog.classList.add('text-red-600');
+                    lastLog.innerHTML = '<svg class="w-4 h-4 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>' + (data.message || '安装失败') + '</span>';
+                    // Back button
+                    const btn = document.createElement('button');
+                    btn.className = 'mt-4 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm';
+                    btn.textContent = '返回修改';
+                    btn.onclick = () => { showPanel(1); connectionTested = false; $('btn-next-1').disabled = true; $('btn-next-1').classList.add('opacity-50', 'cursor-not-allowed'); hideError(); };
+                    $('panel-step-2').appendChild(btn);
+                }
+            } catch (err) {
+                $('install-status').textContent = '请求失败';
+                $('install-status').classList.add('text-red-600');
+                $('log-4').innerHTML = '<svg class="w-4 h-4 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>网络异常: ' + (err.message || '请检查服务是否启动') + '</span>';
+            }
+        }
+
+        // ===== Step 3: Enter System =====
+        function enterSystem() {
+            window.location.href = '/';
+        }
+
+        // ===== Init =====
+        document.addEventListener('DOMContentLoaded', () => {
+            $('db-root-password').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') testConnection();
+            });
+        });
+    </script>
+</body>
+</html>

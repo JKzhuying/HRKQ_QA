@@ -1,0 +1,132 @@
+-- v8.7.0 同意书模板数据插入\n-- 使用MySQL JSON函数避免转义问题\n\nINSERT INTO `consent_templates` (`doc_type`, `title`, `clauses`, `field_schema`) VALUES (
+  '种植手术',
+  '种植手术知情同意书',
+  JSON_ARRAY(
+    '1、我理解种植手术治疗的目的和程序，在经过比较后我愿意选择并要求做种植治疗，我理解作为患者应配合医生完成整个治疗过程。',
+    '2、我将负责地向医生报告自己的健康状况、既往病史、药物过敏史等，如有隐瞒，愿承担后果。',
+    '3、医生已向我介绍了有关麻醉、手术的危险性及可能出现的并发症、术后反应等；如肿胀、疼痛、感染、局部麻木（一时性或长久性）、牙齿损伤、颌骨骨折、上颌窦穿孔、延迟愈合、种植体失败等。我理解这些治疗过程中的一系列问题，并在此基础上同意医生实施种植治疗。',
+    '4、我同意医生为我选择的种植体品牌为【{implant_brand}】，型号为【{implant_model}】，种植牙位为【{tooth_positions}】，种植体数目为【{implant_count}】，医生已经向我详细介绍了整个治疗过程所需的时间和费用，我可以接受，我也同意医生在术中由于新发现的问题而改变原来的种植计划。',
+    '5、我理解按口腔医学"种植失败"定义：在正常行使口腔功能的情况下，所出现的种植体松动、脱落、折断而需从骨内取出种植体（不包括外伤所致的种植体损害）。当种植失败时，医生可根据情况决定取出种植体及采取必要的治疗措施。',
+    '6、我同意医生在治疗过程中照相、录像以及收集各种资料，医生可利用这些资料作为学术交流与研究，但不可公开身份。',
+    '7、种植修复完成后，我将遵照医嘱，保证术后控制吸烟，注意饮食，避免咬过硬食物，坚持正确刷牙。保持口腔卫生，避免外伤，同时保证每半年到一年定期复查。'
+  ),
+  JSON_ARRAY(
+    JSON_OBJECT('name', 'implant_brand', 'label', '植体品牌', 'type', 'text', 'required', TRUE),
+    JSON_OBJECT('name', 'implant_model', 'label', '型号', 'type', 'text', 'required', TRUE),
+    JSON_OBJECT('name', 'tooth_positions', 'label', '种植牙位', 'type', 'tooth_selector', 'required', TRUE),
+    JSON_OBJECT('name', 'implant_count', 'label', '种植体数目', 'type', 'number', 'required', TRUE, 'default', 1)
+  )
+) ON DUPLICATE KEY UPDATE title = VALUES(title), clauses = VALUES(clauses), field_schema = VALUES(field_schema);\n\nINSERT INTO `consent_templates` (`doc_type`, `title`, `clauses`, `field_schema`) VALUES (
+  '补牙',
+  '补牙知情同意书',
+  JSON_ARRAY(
+    '一、患者基本情况',
+    '临床诊断：【{diagnosis}】',
+    '二、拟实施的诊断方案',
+    '【{treatment_plan}】（医生手写）',
+    '三、需要患者确认的基本情况：根据医生的询问及您的陈述，医生会在对应处打（√）',
+    '过敏史：{allergy_history}',
+    '四、治疗过程中或治疗后可能出现的风险和意外：',
+    '1、用于修复龋坏、外伤、磨损等原因造成的牙体缺损，充填材料主要有复合树脂和嵌体等，性能不同价格也有差异，可根据实际情况做选择。',
+    '2、对于缺损较大的牙齿，重度磨耗的牙齿以及咬合紧的牙齿，充填时有可能调磨对颌牙敏感或疼痛等症状。',
+    '3、牙体缺损充填治疗后数日至数周内，患牙有轻微冷热敏感症状多属于正常反应，一般可自行缓解。为增加保护生活牙髓的机会，对于不能诊断为牙髓炎的深龋，医生按常规采取充填治疗，如果出现自发疼痛、咬合疼痛或冷热敏感长期无好转，则可能牙髓已有炎症，一旦出现上诉症状则需要牙髓治疗，需要承担继续治疗的费用。',
+    '4、由于洞型固位不佳、唾液多隔湿效果差等因素可能导致充填物脱落，我们建议三个月到半年复查一次。对于充填后质保期内出现充填脱落的情况，除事先约定的试探保留治疗外，只收取继续治疗的费用，不收取本次治疗的充填材料费用；如改用其他材料和方法只有去差价部分。',
+    '5、医学学科在相当程度上是一个实践学科，治疗的成功率有很大的差异，尤其牙齿的复杂多变性及个体差异，存在一定失败风险，在操作中医生可以根据病情对预定的操作方式作出调整。',
+    '6、根据术前检查及体质情况，除上述风险外，您在治疗中或治疗后还有可能出现下列风险和意外。',
+    '五、补牙注意事项：',
+    '1、补牙后24小时内不能用补牙侧咀嚼食物；一周内先用补牙侧进软食，以后逐渐适应。',
+    '2、补牙后感觉松动或脱落出现食物嵌塞、疼痛等情况应及时与经治医生联系复诊。',
+    '3、不能用补牙侧咬过硬、过韧食物，以免充填物磨损或脱落。',
+    '4、补牙后需认真维持口腔卫生，每年复诊2次。',
+    '5、根据术前检查及体质情况，除上述注意事项外，您在治疗后，还要特别注意下列事项。',
+    '六、患者知情选择：',
+    '1、对本知情同意书一至五部分内容，医生均详细对我进行了告知，根据术前检查及体质情况，可能出现意外及风险和需要特别注意事项，是医生告知我之后书写的，对此我表示充分理解并给予确认。',
+    '2、在实施治疗前，医生除将上述内容详细告知我之外，还通过口头方式，向我详细介绍了有关替代医疗方案。',
+    '3、在充分了解拟实施治疗方案和替代医疗方案优劣利弊、治疗中或治疗后可能出现的风险和意外的基础上，我自愿做如下决定：',
+    '（1）同意实施本知情同意书第二项记载的治疗方案。',
+    '（2）授权医师对本治疗中采集的照片、X光片及病例资料用于非商业意图的学术交流。',
+    '（3）治疗中或治疗后，一旦出现医生告知的风险和意外，我完全理解并积极配合医生完成治疗及支付所有及支付所需相关费用。',
+    '（4）我同意在治疗中，如果发生紧急情况，医师无法或来不及征得本人或家属意见时，授权医师按照医学常规予以紧急处理和救治，我自愿承担相关紧急处理和救治费用。'
+  ),
+  JSON_ARRAY(
+    JSON_OBJECT('name', 'patient_id', 'label', '病历号', 'type', 'text', 'required', TRUE),
+    JSON_OBJECT('name', 'diagnosis', 'label', '临床诊断', 'type', 'text', 'required', TRUE),
+    JSON_OBJECT('name', 'treatment_plan', 'label', '拟实施的诊断方案', 'type', 'handwrite', 'required', TRUE),
+    JSON_OBJECT('name', 'tooth_positions', 'label', '补牙牙位', 'type', 'tooth_selector', 'required', TRUE)
+  )
+) ON DUPLICATE KEY UPDATE title = VALUES(title), clauses = VALUES(clauses), field_schema = VALUES(field_schema);\n\nINSERT INTO `consent_templates` (`doc_type`, `title`, `clauses`, `field_schema`) VALUES (
+  '拔牙',
+  '拔牙知情同意书',
+  JSON_ARRAY(
+    '姓名：【{patient_name}】 性别：【{patient_gender}】 年龄：【{patient_age}】',
+    '诊断：【{diagnosis}】',
+    '在拔牙过程中，医生需要综合分析患者的身体状况，以便决定是否施行拔牙术和拔牙时间。如有以下情况请主动告知医生。若患者隐瞒病史造成不良后果，由患者自行负责。',
+    '1、有无拔牙史（{has_history_1}）  2、有无药物及麻醉过敏史（{has_history_2}）',
+    '3、有无血液病（血友病、血小板减少性紫癜、白血病、贫血等）（{has_history_3}）',
+    '4、有无心脏病、高血压、肝脏病、肾脏病、糖尿病、甲亢、口腔恶性肿瘤等疾病（{has_history_4}）',
+    '5、是否处于月经期或妊娠期（{has_history_5}）',
+    '6、是否空腹（{has_history_6}）  7、是否急性炎症期（{has_history_7}）',
+    '8、建议：',
+    '①、此牙可以进行治疗，患者拒绝（{patient_decline_1}）',
+    '②、此牙可经正畸治疗，患者拒绝（{patient_decline_2}）',
+    '9、【{custom_note}】',
+    '在实行牙齿拔除术时，一般无并发症，但因病人个体差异，局部解剖结构异常变化等原因，有可能出现麻醉并发症、晕厥、牙根折断、软组织损伤、邻牙或对颌牙损伤、牙槽骨及下颌骨骨折、颞下颌关节脱位、上颌窦穿孔、下颌管损伤、下唇麻木、拔牙后出血、拔牙后感染、皮下气肿等并发症，如出现拔牙并发症患者应积极主动配合医生进行治疗。',
+    '拔牙注意事项：',
+    '1.紧咬棉球40分钟后，轻轻吐出；',
+    '2.24小时内不能刷牙漱口，不食过热食物，不用舌吮拔牙创面，避免剧烈运动；',
+    '3.24小时内吐出唾液带血丝为正常状况，如为血块应立即到医院复诊；',
+    '4.拔牙后出现感染、疼痛可口服抗生素及止痛药或到医院复诊；',
+    '5.一般拔牙后1-3月需镶假牙（阻生牙除外）。',
+    '上述内容医生已向我详细解释，我已完全理解，我愿意承担因治疗可能出现的风险并遵从医嘱，配合医生完成全部治疗并同意支付所需全部费用。'
+  ),
+  JSON_ARRAY(
+    JSON_OBJECT('name', 'diagnosis', 'label', '诊断', 'type', 'text', 'required', TRUE),
+    JSON_OBJECT('name', 'tooth_positions', 'label', '拔牙牙位', 'type', 'tooth_selector', 'required', TRUE),
+    JSON_OBJECT('name', 'has_history_1', 'label', '1.有无拔牙史', 'type', 'yesno', 'required', TRUE),
+    JSON_OBJECT('name', 'has_history_2', 'label', '2.有无药物及麻醉过敏史', 'type', 'yesno', 'required', TRUE),
+    JSON_OBJECT('name', 'has_history_3', 'label', '3.有无血液病', 'type', 'yesno', 'required', TRUE),
+    JSON_OBJECT('name', 'has_history_4', 'label', '4.有无心脏病等疾病', 'type', 'yesno', 'required', TRUE),
+    JSON_OBJECT('name', 'has_history_5', 'label', '5.是否处于月经期或妊娠期', 'type', 'yesno', 'required', TRUE),
+    JSON_OBJECT('name', 'has_history_6', 'label', '6.是否空腹', 'type', 'yesno', 'required', TRUE),
+    JSON_OBJECT('name', 'has_history_7', 'label', '7.是否急性炎症期', 'type', 'yesno', 'required', TRUE),
+    JSON_OBJECT('name', 'patient_decline_1', 'label', '8①.此牙可治疗患者拒绝', 'type', 'handwrite', 'required', FALSE),
+    JSON_OBJECT('name', 'patient_decline_2', 'label', '8②.此牙可正畸治疗患者拒绝', 'type', 'handwrite', 'required', FALSE),
+    JSON_OBJECT('name', 'custom_note', 'label', '9.补充说明', 'type', 'text', 'required', FALSE)
+  )
+) ON DUPLICATE KEY UPDATE title = VALUES(title), clauses = VALUES(clauses), field_schema = VALUES(field_schema);\n\nINSERT INTO `consent_templates` (`doc_type`, `title`, `clauses`, `field_schema`) VALUES (
+  '根管治疗',
+  '根管治疗知情同意书',
+  JSON_ARRAY(
+    '姓名：【{patient_name}】 性别：【{patient_gender}】 年龄：【{patient_age}】 NO.【{patient_id}】',
+    '主诉：【{chief_complaint}】（医生手写）',
+    'PE：【{pe}】（医生手写）',
+    'IMP：【{imp}】',
+    '1、牙髓治疗应用于牙髓炎或已坏死导致根尖周病变的牙齿，目前国际上普通采用的治疗是根管治疗，其过程较为复杂，费用较高，（目前国际上成功率达到95%以上，如若再治疗成功率能达65%）。',
+    '2、根管治疗是一种较为复杂的牙髓治疗方法，需要经过根管预备、封药、充填和拍摄多张X线片（一般两到三张）才能完成整个疗程。',
+    '3、由于牙根埋伏在颌骨中，术前医生只能根据X线片或根尖定位仪对根管系统进行大致了解，遇复杂根管，如弯曲、细窄、钙化阻塞或变异根管等其他特殊情况，导致根管不通畅，炎症不能完全消除，偶尔可能发生器械折断的情况，对于取不出的器械而无症状的患牙，不要强行取出器械，其可以作为根管充填材料的一部分留在根管中，不会对机体有损伤，对于取不出的器械而有炎症的患牙，建议拔除再行修复。',
+    '4、根管治疗过程中通常需要配合局部麻醉，通常麻醉反应有：①恶心、呕吐②晕厥③神经麻痹和损伤④皮疹等症状到严重的过敏性休克⑤血肿⑥注射区溃疡及水肿⑦感染⑧暂时性面瘫或暂时性牙关紧闭⑨断针及其他麻醉意外，请治疗前如实告知您的全身情况，以便医生根据您自身情况为您选择适当的麻醉方法，若因患者隐瞒病史而引起的任何意外，自行负责。',
+    '5、根管预备或根管充填后数周内可能会出现疼痛反应，多数属正常反应。如果疼痛严重，伴有局部肿胀和全身反应，应及时复诊，进一步治疗。',
+    '6、根管治疗完成后，机体有一个修复过程，在相当一段时间内（少则数周，多则数月），个别人会感到患牙不适，如酸、麻、胀等感觉，可采取观察方法，极少数患者会感觉到疼痛，如果逐渐加重请及时复查。',
+    '7、因患牙炎症较重，常规根管治疗无法彻底消除炎症，甚至治疗失败的病例，后期可采用根尖手术的方法继续治疗，甚至拔除。费用另计。',
+    '8、根管治疗后的牙齿抗折断能力降低，易劈裂，治疗后必须进行全冠修复或桩核冠修复。冠修复前请避免使用患牙咀嚼硬物。',
+    '9、治疗过程中由于张口时间过长，有可能发生颞下颌关节不舒服甚至脱落。',
+    '10、在根管治疗过程中，要清洗消毒根管。根据患者情况需换药2-3次，封药后一定遵医嘱按时复诊，如若因不能及时复诊而导致的患牙不适甚至治疗失败及全身反应后果自负。消炎药有一定的刺激性，有可能引起疼痛甚至肿胀，通常几天后会好转，可配合口服消炎药、止痛药，如症状加重，可随时复诊。',
+    '11、治疗过程中，如患者未与医生沟通，擅自取出根管内药物或充填材料或私自去别院就诊，所出现问题由患者负全责，治疗费用概不退还。',
+    '12、需通过根管治疗而姑息保留的患牙（经试验性治疗）成功与否及治疗术后患牙使用的时间长短均不能给予保证，并且治疗后患者不能正常行使其功能的应拔除时，所需费用自付。',
+    '患者陈述：【{patient_statement}】（医生手写）',
+    '我同意在操作中医生可以根据我的病情对预定的操作方式作出调整。配合医生完成全部治疗并同意支付所需全部费用。',
+    '我理解我的操作需要多位医生共同进行，我并未得到操作百分之百成功的许诺。',
+    '同意我的病历及影像资料被用于学术交流与临床研究。',
+    '医生陈述：【{doctor_statement}】（医生手写）',
+    '我已告知患者将要进行的治疗方式和此次操作后可能发生的并发症和风险，可能存在的其他治疗方法并且解答了患者关于此次操作的相关问题。'
+  ),
+  JSON_ARRAY(
+    JSON_OBJECT('name', 'patient_id', 'label', 'NO.', 'type', 'text', 'required', TRUE),
+    JSON_OBJECT('name', 'tooth_positions', 'label', '治疗牙位', 'type', 'tooth_selector', 'required', TRUE),
+    JSON_OBJECT('name', 'chief_complaint', 'label', '主诉', 'type', 'handwrite', 'required', TRUE),
+    JSON_OBJECT('name', 'pe', 'label', 'PE', 'type', 'handwrite', 'required', TRUE),
+    JSON_OBJECT('name', 'imp', 'label', 'IMP', 'type', 'text', 'required', FALSE),
+    JSON_OBJECT('name', 'patient_statement', 'label', '患者陈述', 'type', 'handwrite', 'required', TRUE),
+    JSON_OBJECT('name', 'doctor_statement', 'label', '医生陈述', 'type', 'handwrite', 'required', TRUE)
+  )
+) ON DUPLICATE KEY UPDATE title = VALUES(title), clauses = VALUES(clauses), field_schema = VALUES(field_schema);\n\n-- 验证\n-- SELECT doc_type, title, JSON_LENGTH(clauses) as clause_count FROM consent_templates;\n
