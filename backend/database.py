@@ -553,7 +553,7 @@ def init_database():
         )
     ''')
 
-    # v8.6.5: 文件签署中心 - 通用同意书表
+    # v8.6.6: 文件签署中心 - 通用同意书表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS consent_documents (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -585,7 +585,7 @@ def init_database():
         )
     ''')
 
-    # v8.6.5: 同意书模板表
+    # v8.6.6: 同意书模板表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS consent_templates (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -599,23 +599,45 @@ def init_database():
 
     conn.commit()
 
-    # v8.6.5: 新增 barcode_image_path 字段（已有表时）
+    # v8.6.6: 新增 barcode_image_path 字段（已有表时）
     try:
-        cursor.execute('ALTER TABLE consent_documents ADD COLUMN barcode_image_path VARCHAR(255) COMMENT %s', ('种植体标签照片路径',))
+        cursor.execute('ALTER TABLE consent_documents ADD COLUMN barcode_image_path VARCHAR(255) COMMENT %s', ('种植体标签照片照片路径',))
     except Exception:
         pass  # 字段已存在
 
-    # v8.6.5: 迁移旧数据 + 初始化模板
+    # v8.6.6: 更新数据库中旧的路径记录（backend/uploads → uploads）
+    _migrate_upload_paths(cursor)
+
+    # v8.6.6: 迁移旧数据 + 初始化模板
     _migrate_consent_data(cursor)
     _init_consent_templates(cursor)
 
     conn.commit()
     conn.close()
-    print('MySQL init done v8.6.5')
+    print('MySQL init done v8.6.6')
+
+
+def _migrate_upload_paths(cursor):
+    """v8.6.6: 更新数据库中存储的旧路径（backend/uploads → uploads）"""
+    import os
+    # consent_documents 表中的文件路径字段
+    path_fields = ['patient_signature_path', 'guardian_signature_path',
+                   'doctor_signature_path', 'barcode_image_path', 'pdf_path']
+    for field in path_fields:
+        try:
+            cursor.execute(f"""
+                UPDATE consent_documents
+                SET {field} = REPLACE({field}, 'backend/uploads/', 'uploads/')
+                WHERE {field} IS NOT NULL AND {field} LIKE '%backend/uploads/%'
+            """)
+            if cursor.rowcount > 0:
+                print(f'[MIGRATE] 已更新 {field} 中 {cursor.rowcount} 条旧路径')
+        except Exception:
+            pass  # 字段可能不存在，忽略
 
 
 def _migrate_consent_data(cursor):
-    """v8.6.5: 从旧表 informed_consents 迁移数据到 consent_documents"""
+    """v8.6.6: 从旧表 informed_consents 迁移数据到 consent_documents"""
     # 检查旧表是否存在
     cursor.execute("SHOW TABLES LIKE 'informed_consents'")
     if not cursor.fetchone():
@@ -650,7 +672,7 @@ def _migrate_consent_data(cursor):
 
 
 def _init_consent_templates(cursor):
-    """v8.6.5: 初始化/刷新同意书模板数据。每次启动无条件更新，确保条款内容与代码一致。"""
+    """v8.6.6: 初始化/刷新同意书模板数据。每次启动无条件更新，确保条款内容与代码一致。"""
     templates = _get_consent_template_data()
     for t in templates:
         cursor.execute('SELECT id FROM consent_templates WHERE doc_type = %s', (t['doc_type'],))
@@ -669,7 +691,7 @@ def _init_consent_templates(cursor):
 
 
 def _get_consent_template_data():
-    """v8.6.5: 4种同意书的条款和字段定义"""
+    """v8.6.6: 4种同意书的条款和字段定义"""
     return [
         {
             'doc_type': '种植手术',

@@ -1,5 +1,5 @@
 """
-文件签署中心 - v8.6.5
+文件签署中心 - v8.6.6
 通用同意书引擎：种植手术/补牙/拔牙/根管治疗
 """
 import os
@@ -13,12 +13,28 @@ from flask import Blueprint, request, jsonify, send_file
 from database import get_db_connection
 
 consents_bp = Blueprint('consents', __name__)
-CONSENT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'consents')
+# v8.6.6: 上传目录在项目根目录（backend 外部），避免替换 backend 文件夹时丢失
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+CONSENT_DIR = os.path.join(PROJECT_ROOT, 'uploads', 'consents')
 
 
 def _ensure_dir(path):
     os.makedirs(path, exist_ok=True)
     return path
+
+
+def _to_url_path(abs_path):
+    """将服务器绝对路径转为前端可访问的 /uploads/... URL 路径"""
+    if not abs_path:
+        return None
+    # 提取 uploads/ 之后的部分
+    idx = abs_path.find('/uploads/')
+    if idx >= 0:
+        return abs_path[idx:]
+    idx = abs_path.find('uploads/')
+    if idx >= 0:
+        return '/' + abs_path[idx:]
+    return abs_path
 
 
 def _generate_doc_no():
@@ -235,6 +251,10 @@ def get_consent(cid):
     data = dict(row)
     data['tooth_positions'] = _parse_json_field(data.get('tooth_positions'))
     data['extra_fields'] = _parse_json_field(data.get('extra_fields'))
+    data['barcode_image_path'] = _to_url_path(data.get('barcode_image_path'))
+    data['patient_signature_path'] = _to_url_path(data.get('patient_signature_path'))
+    data['guardian_signature_path'] = _to_url_path(data.get('guardian_signature_path'))
+    data['doctor_signature_path'] = _to_url_path(data.get('doctor_signature_path'))
     return jsonify({'code': 200, 'data': data})
 
 
@@ -352,7 +372,7 @@ def submit_signature(cid):
             filepath = _save_signature(signature_b64, subdir, 'doctor')
             cursor.execute('''UPDATE consent_documents SET doctor_signature_path=%s, doctor_sign_date=%s, doctor_sign_ip=%s WHERE id=%s''',
                            (filepath, today, ip, cid))
-            # v8.6.5: 患者或家属有1个签名 + 医生签名 = 已完成
+            # v8.6.6: 患者或家属有1个签名 + 医生签名 = 已完成
             cursor.execute('''UPDATE consent_documents SET status='已完成'
                 WHERE id=%s AND doctor_signature_path IS NOT NULL
                 AND (patient_signature_path IS NOT NULL OR guardian_signature_path IS NOT NULL)''', (cid,))
@@ -373,7 +393,7 @@ def submit_signature(cid):
 
 @consents_bp.route('/<int:cid>/barcode', methods=['POST'])
 def upload_barcode_image(cid):
-    """v8.6.5: 上传种植体标签照片（仅种植手术同意书）"""
+    """v8.6.6: 上传种植体标签照片（仅种植手术同意书）"""
     if 'image' not in request.files:
         return jsonify({'code': 400, 'message': '请选择图片文件'}), 400
 
@@ -428,7 +448,7 @@ def upload_barcode_image(cid):
     conn.commit()
     conn.close()
 
-    return jsonify({'code': 200, 'message': '上传成功', 'data': {'barcode_image_path': filepath}})
+    return jsonify({'code': 200, 'message': '上传成功', 'data': {'barcode_image_path': _to_url_path(filepath)}})
 
 
 # ========== 删除（作废） ==========
@@ -708,7 +728,7 @@ def _create_consent_pdf(data):
     sign_t.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE'),('TOPPADDING',(0,0),(-1,-1),12),('BOTTOMPADDING',(0,0),(-1,-1),12)]))
     elements.append(sign_t)
 
-    # v8.6.5: 种植体标签照片
+    # v8.6.6: 种植体标签照片
     barcode_path = data.get('barcode_image_path')
     if barcode_path and os.path.exists(barcode_path):
         from reportlab.platypus import Image as RLImage

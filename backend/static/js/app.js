@@ -3533,7 +3533,7 @@ function loadInventoryWarnings(level) {
 }
 
 
-// ==================== 文件签署中心 v8.6.5 ====================
+// ==================== 文件签署中心 v8.6.6 ====================
 
 var _consentCurrentPage = 1;
 var _selectedConsentId = null;
@@ -3543,7 +3543,7 @@ var _currentDocType = '';         // 当前同意书类型
 var _consentTemplateCache = {};   // 模板缓存
 var _currentFieldSchema = [];     // 当前类型的字段定义
 
-// ---- 种植体标签照片 v8.6.5 ----
+// ---- 种植体标签照片 v8.6.6 ----
 
 function _toggleBarcodeSection(docType) {
     var section = document.getElementById('consent-barcode-section');
@@ -3610,7 +3610,7 @@ function uploadBarcodeImage(input) {
 // ---- 列表 ----
 
 function _refreshConsentTemplates() {
-    // v8.6.5: 进入签署中心时自动刷新模板数据（解决条款内容不显示问题）
+    // v8.6.6: 进入签署中心时自动刷新模板数据（解决条款内容不显示问题）
     api('/api/consents/templates/refresh', { method: 'POST' }).then(function(res) {
         if (res.code === 200) {
             // 刷新成功后清空缓存，下次加载会重新从数据库读取
@@ -3672,7 +3672,7 @@ function showConsentForm(docType) {
         _renderConsentClauses(template.clauses || []);
         // 渲染手写区域
         _renderHandwriteAreas(_currentFieldSchema);
-        // v8.6.5: 控制种植体标签照片区域显示
+        // v8.6.6: 控制种植体标签照片区域显示
         _toggleBarcodeSection(docType);
         // 重置签名
         _resetSignPreview('patient');
@@ -3907,7 +3907,7 @@ function editConsent(id) {
             _loadSignPreview('patient', r.patient_signature_path, r.patient_sign_date);
             _loadSignPreview('guardian', r.guardian_signature_path, r.guardian_sign_date);
             _loadSignPreview('doctor', r.doctor_signature_path, r.doctor_sign_date);
-            // v8.6.5: 加载种植体标签照片
+            // v8.6.6: 加载种植体标签照片
             _toggleBarcodeSection(_currentDocType);
             _loadBarcodePreview(r.barcode_image_path);
             _checkCompleteBtn(r);
@@ -3940,7 +3940,34 @@ function completeConsent() {
 
 function generateConsentPDF() {
     if (!_selectedConsentId) { alert('请先保存同意书'); return; }
-    window.open('/api/consents/' + _selectedConsentId + '/pdf', '_blank');
+    // v8.6.6: 如果PDF不存在，先自动归档生成PDF
+    api('/api/consents/' + _selectedConsentId).then(function(res) {
+        if (res.code !== 200) { alert('加载失败'); return; }
+        if (res.data && res.data.pdf_path) {
+            // PDF已存在，直接下载
+            window.open('/api/consents/' + _selectedConsentId + '/pdf', '_blank');
+        } else {
+            // PDF不存在，先完成归档
+            if (!confirm('同意书尚未归档，是否先完成归档并生成PDF？')) return;
+            completeConsentThenDownload();
+        }
+    });
+}
+
+function completeConsentThenDownload() {
+    var btn = document.getElementById('consent-complete-btn');
+    if (btn) { btn.textContent = '归档中...'; btn.disabled = true; }
+    api('/api/consents/' + _selectedConsentId + '/complete', { method: 'POST' }).then(function(res) {
+        if (res.code === 200) {
+            window.open('/api/consents/' + _selectedConsentId + '/pdf', '_blank');
+            loadConsents();
+            showConsentDetail(_selectedConsentId);
+        } else { alert(res.message || '归档失败'); }
+    }).catch(function(e) {
+        alert('归档失败: ' + e.message);
+    }).finally(function() {
+        if (btn) { btn.textContent = '完成归档'; btn.disabled = false; }
+    });
 }
 
 function _checkCompleteBtn(r) {
@@ -4093,7 +4120,7 @@ function previewConsent() {
         document.getElementById('preview-guardian-relation').textContent = r.guardian_relation || '';
         _fillPreviewSign('doctor', r.doctor_signature_path, r.doctor_sign_date, r.doc_no);
 
-        // v8.6.5: 种植体标签照片预览
+        // v8.6.6: 种植体标签照片预览
         var barcodeSection = document.getElementById('preview-barcode-section');
         if (r.doc_type === '种植手术' && r.barcode_image_path) {
             barcodeSection.classList.remove('hidden');

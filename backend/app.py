@@ -8,12 +8,32 @@ from database import init_database
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
-# 配置
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
+# v8.6.6: 上传目录移到项目根目录（backend 外部），避免替换 backend 文件夹时丢失上传文件
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+app.config['UPLOAD_FOLDER'] = os.path.join(PROJECT_ROOT, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 最大16MB
 
 # 确保上传目录存在
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# v8.6.6: 启动时自动迁移旧目录文件（backend/uploads → 项目根目录/uploads）
+import shutil
+_old_uploads = os.path.join(os.path.dirname(__file__), 'uploads')
+_new_uploads = app.config['UPLOAD_FOLDER']
+if _old_uploads != _new_uploads and os.path.isdir(_old_uploads):
+    for item in os.listdir(_old_uploads):
+        src = os.path.join(_old_uploads, item)
+        dst = os.path.join(_new_uploads, item)
+        if not os.path.exists(dst):
+            shutil.move(src, dst)
+        elif os.path.isdir(src) and os.path.isdir(dst):
+            # 目录已存在，合并子文件
+            for sub in os.listdir(src):
+                sub_src = os.path.join(src, sub)
+                sub_dst = os.path.join(dst, sub)
+                if not os.path.exists(sub_dst):
+                    shutil.move(sub_src, sub_dst)
+    print('[MIGRATE] 上传文件已从 backend/uploads 迁移到 uploads/')
 
 # ==================== v9.0 安装状态检测 ====================
 # 运行时动态检查（不要缓存！安装完成后会自动切换）
@@ -88,11 +108,12 @@ def serve_js(path):
     return send_from_directory('static/js', path)
 
 
-# v8.5: 提供上传文件访问（库存照片、供应商证照）
+# v8.5: 提供上传文件访问（库存照片、供应商证照、签名图片、条码标签）
+# v8.6.6: 使用绝对路径，上传目录在项目根目录（backend 外部）
 @app.route('/uploads/<path:path>')
 def serve_uploads(path):
     """提供 uploads 目录下的文件访问"""
-    return send_from_directory('uploads', path)
+    return send_from_directory(app.config['UPLOAD_FOLDER'], path)
 
 
 # 健康检查

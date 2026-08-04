@@ -12,9 +12,10 @@ from database import get_db_connection
 
 inventory_bp = Blueprint('inventory', __name__)
 
-# 上传目录
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'inventory')
-SUPPLIER_PHOTO_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'supplier')
+# v8.6.5: 上传目录在项目根目录（backend 外部），避免替换 backend 文件夹时丢失
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+UPLOAD_DIR = os.path.join(PROJECT_ROOT, 'uploads', 'inventory')
+SUPPLIER_PHOTO_DIR = os.path.join(PROJECT_ROOT, 'uploads', 'supplier')
 
 
 def _ensure_dir(path):
