@@ -1,6 +1,6 @@
 """
-文件签署中心 - v8.6.6
-通用同意书引擎：种植手术/补牙/拔牙/根管治疗
+文件签署中心 - v8.6.8
+通用同意书引擎：种植手术/补牙/拔牙/根管治疗/固定义齿修复
 """
 import os
 import uuid
@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify, send_file
 from database import get_db_connection
 
 consents_bp = Blueprint('consents', __name__)
-# v8.6.6: 上传目录在项目根目录（backend 外部），避免替换 backend 文件夹时丢失
+# v8.6.8: 上传目录在项目根目录（backend 外部），避免替换 backend 文件夹时丢失
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 CONSENT_DIR = os.path.join(PROJECT_ROOT, 'uploads', 'consents')
 
@@ -372,7 +372,7 @@ def submit_signature(cid):
             filepath = _save_signature(signature_b64, subdir, 'doctor')
             cursor.execute('''UPDATE consent_documents SET doctor_signature_path=%s, doctor_sign_date=%s, doctor_sign_ip=%s WHERE id=%s''',
                            (filepath, today, ip, cid))
-            # v8.6.6: 患者或家属有1个签名 + 医生签名 = 已完成
+            # v8.6.8: 患者或家属有1个签名 + 医生签名 = 已完成
             cursor.execute('''UPDATE consent_documents SET status='已完成'
                 WHERE id=%s AND doctor_signature_path IS NOT NULL
                 AND (patient_signature_path IS NOT NULL OR guardian_signature_path IS NOT NULL)''', (cid,))
@@ -393,7 +393,7 @@ def submit_signature(cid):
 
 @consents_bp.route('/<int:cid>/barcode', methods=['POST'])
 def upload_barcode_image(cid):
-    """v8.6.6: 上传种植体标签照片（仅种植手术同意书）"""
+    """v8.6.8: 上传种植体标签照片（仅种植手术同意书）"""
     if 'image' not in request.files:
         return jsonify({'code': 400, 'message': '请选择图片文件'}), 400
 
@@ -604,7 +604,7 @@ def _create_consent_pdf(data):
     elements = []
 
     # 标题
-    title_map = {'种植手术':'种植手术知情同意书', '补牙':'补牙知情同意书', '拔牙':'拔牙知情同意书', '根管治疗':'根管治疗知情同意书'}
+    title_map = {'种植手术':'种植手术知情同意书', '补牙':'补牙知情同意书', '拔牙':'拔牙知情同意书', '根管治疗':'根管治疗知情同意书', '固定义齿修复':'固定义齿修复知情同意书'}
     elements.append(Paragraph(title_map.get(data['doc_type'], '知情同意书'), title_s))
     elements.append(Spacer(1, 2*mm))
 
@@ -661,6 +661,7 @@ def _create_consent_pdf(data):
         'imp': extra.get('imp', ''),
         'patient_statement': '(手写内容见下方)',
         'doctor_statement': '(手写内容见下方)',
+        'doctor_name': extra.get('doctor_name', ''),
     }
     # 拔牙病史是 yesno 类型
     for i in range(1, 8):
@@ -728,7 +729,7 @@ def _create_consent_pdf(data):
     sign_t.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE'),('TOPPADDING',(0,0),(-1,-1),12),('BOTTOMPADDING',(0,0),(-1,-1),12)]))
     elements.append(sign_t)
 
-    # v8.6.6: 种植体标签照片
+    # v8.6.8: 种植体标签照片
     barcode_path = data.get('barcode_image_path')
     if barcode_path and os.path.exists(barcode_path):
         from reportlab.platypus import Image as RLImage

@@ -553,7 +553,7 @@ def init_database():
         )
     ''')
 
-    # v8.6.6: 文件签署中心 - 通用同意书表
+    # v8.6.8: 文件签署中心 - 通用同意书表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS consent_documents (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -585,7 +585,7 @@ def init_database():
         )
     ''')
 
-    # v8.6.6: 同意书模板表
+    # v8.6.8: 同意书模板表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS consent_templates (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -599,26 +599,26 @@ def init_database():
 
     conn.commit()
 
-    # v8.6.6: 新增 barcode_image_path 字段（已有表时）
+    # v8.6.8: 新增 barcode_image_path 字段（已有表时）
     try:
         cursor.execute('ALTER TABLE consent_documents ADD COLUMN barcode_image_path VARCHAR(255) COMMENT %s', ('种植体标签照片照片路径',))
     except Exception:
         pass  # 字段已存在
 
-    # v8.6.6: 更新数据库中旧的路径记录（backend/uploads → uploads）
+    # v8.6.8: 更新数据库中旧的路径记录（backend/uploads → uploads）
     _migrate_upload_paths(cursor)
 
-    # v8.6.6: 迁移旧数据 + 初始化模板
+    # v8.6.8: 迁移旧数据 + 初始化模板
     _migrate_consent_data(cursor)
     _init_consent_templates(cursor)
 
     conn.commit()
     conn.close()
-    print('MySQL init done v8.6.6')
+    print('MySQL init done v8.6.8')
 
 
 def _migrate_upload_paths(cursor):
-    """v8.6.6: 更新数据库中存储的旧路径（backend/uploads → uploads）"""
+    """v8.6.8: 更新数据库中存储的旧路径（backend/uploads → uploads）"""
     import os
     # consent_documents 表中的文件路径字段
     path_fields = ['patient_signature_path', 'guardian_signature_path',
@@ -637,7 +637,7 @@ def _migrate_upload_paths(cursor):
 
 
 def _migrate_consent_data(cursor):
-    """v8.6.6: 从旧表 informed_consents 迁移数据到 consent_documents"""
+    """v8.6.8: 从旧表 informed_consents 迁移数据到 consent_documents"""
     # 检查旧表是否存在
     cursor.execute("SHOW TABLES LIKE 'informed_consents'")
     if not cursor.fetchone():
@@ -672,7 +672,7 @@ def _migrate_consent_data(cursor):
 
 
 def _init_consent_templates(cursor):
-    """v8.6.6: 初始化/刷新同意书模板数据。每次启动无条件更新，确保条款内容与代码一致。"""
+    """v8.6.8: 初始化/刷新同意书模板数据。每次启动无条件更新，确保条款内容与代码一致。"""
     templates = _get_consent_template_data()
     for t in templates:
         cursor.execute('SELECT id FROM consent_templates WHERE doc_type = %s', (t['doc_type'],))
@@ -691,7 +691,7 @@ def _init_consent_templates(cursor):
 
 
 def _get_consent_template_data():
-    """v8.6.6: 4种同意书的条款和字段定义"""
+    """v8.6.8: 5种同意书的条款和字段定义"""
     return [
         {
             'doc_type': '种植手术',
@@ -825,6 +825,28 @@ def _get_consent_template_data():
                 {'name': 'imp', 'label': 'IMP', 'type': 'text', 'required': False},
                 {'name': 'patient_statement', 'label': '患者陈述', 'type': 'handwrite', 'required': True},
                 {'name': 'doctor_statement', 'label': '医生陈述', 'type': 'handwrite', 'required': True},
+            ]
+        },
+        # v8.6.8: 新增固定义齿修复知情同意书
+        {
+            'doc_type': '固定义齿修复',
+            'title': '固定义齿修复知情同意书',
+            'clauses': [
+                '医生已经向我详细解释了固定修复的过程，我也了解了牙体预备、配戴临时冠、及粘接固定义齿等所有的事宜。医生已对我进行了详细的检查。就我个人表达能力范围内，我已经把我的健康状况准确无误地告诉了医生。这些包括所有以往的对药物、食物、昆虫咬伤、麻醉药、医院花粉、粉尘等变态反应或不寻常反应；血液或躯体疾病；牙龈或皮肤反应；异常出血；以及任何其他与身体健康有关的情况。',
+                '我早知道有其他方法可以修复缺损、缺失或形态颜色不良的牙齿，并已考虑过或试用过这些方法，但现在，我请求用固定义齿来修复缺失的牙齿或支持目前的假牙。我知道可能会发生以下情况：牙髓、牙龈的损伤，需进行牙髓或牙龈的相关治疗。骨吸收或牙龈萎缩导致固定义齿边缘外露、发炎、牙齿松动需要拆除或重做固定义齿。牙龈黑线、红肿，需更换贵金属固定义齿或铸瓷。我也知道使用常用的活动托牙也会引起牙齿松动或骨的吸收。',
+                '医生已经告诉我：牙体预备时，要将相关牙齿磨除1.5-2mm厚牙釉质，有时需要使用麻药。在固定义齿作好之前，要认真配戴临时冠，配戴临时冠可能会有一些不适感，如：冷、热、酸、甜刺激痛。同时要注意保持口腔卫生。',
+                '医生已经告诉我：对于任何使用固定义齿的病人，维护良好的口腔卫生是非常重要的。我知道抽烟、酗酒或偏食都可能影响牙龈的健康和可能限制固定修复的成功。我同意遵循医嘱要求的饮食建议和牙床护理。我同意按医嘱要求的做定期检查。根据医生的判断，如果固定修复体不能正常行使功能，不管何种原因，本人将同意拆除固定修复体。根据医生的决定，用常用修复体或另外的固定修复体取代。',
+                '我已经知道偶尔会出现手术、药物和麻醉的并发症。可能会出现牙齿损伤和变态反应，以及唇、颊部、脸、舌、颊和牙齿的不适，这种不适所持续的时间不可确定，可能是不可逆的。医生也已经告诉我：这种情况下，固定修复体可能失败。',
+                '我知道固定义齿的制作将由专业制作中心来完成。石膏模型在邮寄过程中有可能被损坏，需要重新取模型后邮寄，而导致等待时间延长。',
+                '有了这些深刻而全面的了解，我要求【{doctor_name}】医生为我的牙齿【{tooth_positions}】(牙位)实施包括牙体预备在内的牙科手术。我同意所选择的麻醉类型。我同意在24小时内或直到完全从麻醉药或手术后辅助药中恢复前不开车或从事其他易造成伤害的工作。',
+                '对于用于牙科领域发展的摄像、幻灯、录像、X线和其他有关我的护理和治疗的调查，我均授权。对于医生的建议，如符合我的利益，我同意有关设计、材料和护理方式等方面的修改。',
+                '我知道谁也保证不了固定义齿百分百的成功。因此，我进一步建议：在我的治疗前或当中，我所问到的有关固定义齿的风险能得到更详细的说明。',
+                '固定义齿修复的程序和风险医生已向我解释，我充分理解，同意接受治疗。',
+            ],
+            'field_schema': [
+                {'name': 'diagnosis', 'label': '临床诊断', 'type': 'text', 'required': True},
+                {'name': 'tooth_positions', 'label': '修复牙位', 'type': 'tooth_selector', 'required': True},
+                {'name': 'doctor_name', 'label': '主治医生', 'type': 'text', 'required': True},
             ]
         },
     ]

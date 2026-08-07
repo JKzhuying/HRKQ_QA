@@ -496,3 +496,111 @@ def delete_inventory(inv_id):
     return jsonify({'code': 200, 'message': '已删除'})
 
 
+# ==================== v8.6.8: 腾讯云OCR采购单文字识别 ====================
+
+import base64
+import json
+
+
+def _get_tencent_ocr_cred():
+    """获取腾讯云OCR认证凭据（从环境变量读取）"""
+    secret_id = os.environ.get('TENCENTCLOUD_SECRET_ID')
+    secret_key = os.environ.get('TENCENTCLOUD_SECRET_KEY')
+    if not secret_id or not secret_key:
+        raise RuntimeError('腾讯云OCR密钥未配置，请在 env/.env 文件中设置')
+    return secret_id, secret_key
+
+
+@inventory_bp.route('/ocr-purchase', methods=['POST'])
+def ocr_purchase_image():
+    """v8.6.8: 腾讯云OCR识别采购单照片
+    
+    请求方式（二选一）：
+      1. multipart/form-data 上传图片文件:
+         - image: 图片文件 (jpg/png, 最大10MB)
+      2. JSON 传入已上传文件路径:
+         - photo_path: 服务器上的图片路径
+    
+    响应:
+      - 200: { code: 200, data: { text: "识别的完整文本..." } }
+      - 400: 文件太大/格式不支持/密钥未配置
+    """
+    img_base64 = None
+
+    # 方式1：直接上传图片文件
+    if 'image' in request.files:
+        file = request.files['image']
+        if file and file.filename:
+            allowed_ext = {'.jpg', '.jpeg', '.png'}
+            ext = os.path.splitext(file.filename)[1].lower()
+            if ext not in allowed_ext:
+                return jsonify({'code': 400, 'message': '仅支持 JPG/PNG 格式'}), 400
+            file.seek(0, os.SEEK_END)
+            file_size = file.tell()
+            file.seek(0)
+            if file_size > 10 * 1024 * 1024:
+                return jsonify({'code': 400, 'message': '图片大小不能超过10MB'}), 400
+            img_base64 = base64.b64encode(file.read()).decode('utf-8')
+
+    # 方式2：传入已上传的文件路径
+    if not img_base64:
+        data = request.get_json() or {}
+        photo_path = data.get('photo_path') or request.form.get('photo_path')
+        if photo_path:
+            # 转为绝对路径
+            if photo_path.startswith('/uploads/'):
+                abs_path = os.path.join(PROJECT_ROOT, photo_path.lstrip('/'))
+            elif not os.path.isabs(photo_path):
+                abs_path = os.path.join(PROJECT_ROOT, photo_path)
+            else:
+                abs_path = photo_path
+            if os.path.exists(abs_path):
+                with open(abs_path, 'rb') as f:
+                    img_base64 = base64.b64encode(f.read()).decode('utf-8')
+            else:
+                return jsonify({'code': 400, 'message': '图片文件不存在'}), 400
+
+    if not img_base64:
+        return jsonify({'code': 400, 'message': '请选择图片文件或传入图片路径'}), 400
+
+    try:
+
+        # 获取腾讯云密钥
+        secret_id, secret_key = _get_tencent_ocr_cred()
+
+        # 调用腾讯云OCR
+        from tencentcloud.common import credential
+        from tencentcloud.common.profile.client_profile import ClientProfile
+        from tencentcloud.common.profile.http_profile import HttpProfile
+        from tencentcloud.ocr.v20181119 import ocr_client, models
+
+        cred = credential.Credential(secret_id, secret_key)
+        httpProfile = HttpProfile()
+        httpProfile.endpoint = "ocr.tencentcloudapi.com"
+        clientProfile = ClientProfile()
+        clientProfile.httpProfile = httpProfile
+        client = ocr_client.OcrClient(cred, "ap-guangzhou", clientProfile)
+
+        req = models.GeneralBasicOCRRequest()
+        params = {"ImageBase64": img_base64}
+        req.from_json_string(json.dumps(params))
+
+        resp = client.GeneralBasicOCR(req)
+        result = json.loads(resp.to_json_string())
+
+        # 拼接所有识别文字
+        texts = [item.get("DetectedText", "") for item in result.get("TextDetections", [])]
+        full_text = "\n".join(texts)
+
+        return jsonify({
+            'code': 200,
+            'message': '识别成功',
+            'data': {'text': full_text}
+        })
+
+    except RuntimeError as e:
+        return jsonify({'code': 400, 'message': str(e)}), 400
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'code': 500, 'message': f'识别失败: {str(e)}'}), 500

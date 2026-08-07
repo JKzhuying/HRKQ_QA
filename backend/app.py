@@ -1,6 +1,17 @@
 from flask import Flask, send_from_directory, jsonify, request
 from flask_cors import CORS
 import os
+
+# v8.6.8: 加载环境变量（腾讯云OCR密钥等）
+# 环境变量文件存放在 backend 同级目录的 env/ 文件夹下，与 .config/ 并列管理
+_env_path = os.path.join(os.path.dirname(__file__), '..', 'env', '.env')
+if os.path.exists(_env_path):
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(_env_path)
+    except ImportError:
+        pass  # python-dotenv 未安装，依赖系统环境变量
+
 from utils.config_manager import config_exists, get_db_config
 from database import init_database
 
@@ -8,7 +19,7 @@ from database import init_database
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
-# v8.6.6: 上传目录移到项目根目录（backend 外部），避免替换 backend 文件夹时丢失上传文件
+# v8.6.8: 上传目录移到项目根目录（backend 外部），避免替换 backend 文件夹时丢失上传文件
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 app.config['UPLOAD_FOLDER'] = os.path.join(PROJECT_ROOT, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 最大16MB
@@ -16,7 +27,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 最大16MB
 # 确保上传目录存在
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# v8.6.6: 启动时自动迁移旧目录文件（backend/uploads → 项目根目录/uploads）
+# v8.6.8: 启动时自动迁移旧目录文件（backend/uploads → 项目根目录/uploads）
 import shutil
 _old_uploads = os.path.join(os.path.dirname(__file__), 'uploads')
 _new_uploads = app.config['UPLOAD_FOLDER']
@@ -109,7 +120,7 @@ def serve_js(path):
 
 
 # v8.5: 提供上传文件访问（库存照片、供应商证照、签名图片、条码标签）
-# v8.6.6: 使用绝对路径，上传目录在项目根目录（backend 外部）
+# v8.6.8: 使用绝对路径，上传目录在项目根目录（backend 外部）
 @app.route('/uploads/<path:path>')
 def serve_uploads(path):
     """提供 uploads 目录下的文件访问"""

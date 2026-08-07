@@ -1267,27 +1267,48 @@
                         </div>
                     </div>
                 </div>
-                <!-- 照片上传 -->
+                <!-- 照片上传 + OCR识别 v8.6.8 -->
                 <div class="bg-white rounded-xl shadow-sm border p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">出库单照片</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">出库单照片 <span class="text-xs font-normal text-gray-400">（上传后自动OCR识别）</span></h3>
                     <div id="inv-photo-upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors">
                         <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         <p class="text-gray-500 mb-2">点击上传或拖拽照片到此处</p>
-                        <p class="text-xs text-gray-400">支持 JPG / PNG</p>
+                        <p class="text-xs text-gray-400">支持 JPG / PNG，最大 10MB</p>
                         <input type="file" id="inv-photo-input" class="hidden" accept="image/*">
                     </div>
-                    <!-- 照片预览 + 框选区域 -->
-                    <div id="inv-photo-preview-area" class="hidden mt-4 relative">
+                    <!-- 照片预览 + OCR识别结果（左右对半布局） -->
+                    <div id="inv-photo-preview-area" class="hidden mt-4">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-sm text-gray-500">照片仅供参考，请在下方手动录入商品信息</span>
                             <button onclick="removeInventoryPhoto()" class="text-red-500 text-sm hover:text-red-700">移除照片</button>
                         </div>
-                        <div class="relative border rounded-lg" id="inv-photo-container" style="max-height: 500px; overflow: auto;">
-                            <img id="inv-preview-img" src="" class="max-w-none" style="max-height: 500px; cursor: crosshair;">
-                            <div id="inv-selection-rect" class="absolute border-2 border-primary bg-primary/10 hidden" style="pointer-events: none;"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- 左侧：照片预览 -->
+                            <div class="relative border rounded-lg" id="inv-photo-container" style="max-height: 400px; overflow: auto;">
+                                <img id="inv-preview-img" src="" class="max-w-none" style="max-height: 400px; cursor: crosshair;">
+                                <div id="inv-selection-rect" class="absolute border-2 border-primary bg-primary/10 hidden" style="pointer-events: none;"></div>
+                            </div>
+                            <!-- 右侧：OCR识别结果 -->
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="text-sm font-medium text-gray-700">识别结果 <span class="text-gray-400 font-normal">（可选中复制）</span></label>
+                                    <span id="ocr-status" class="hidden text-xs text-blue-500">识别中...</span>
+                                </div>
+                                <textarea id="ocr-result-text" class="w-full h-full min-h-[200px] px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="上传照片后自动识别，结果将显示在此处...
+
+使用方式：
+1. 用鼠标选中需要的文字
+2. Ctrl+C 复制
+3. 粘贴到下方表单对应字段"></textarea>
+                                <div class="flex gap-2 mt-2">
+                                    <button onclick="clearOcrResult()" class="px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200">清空</button>
+                                    <button onclick="copyOcrResult()" class="px-3 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100">复制全部</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
                 <!-- 商品明细 -->
                 <div class="bg-white rounded-xl shadow-sm border p-6">
                     <div class="flex items-center justify-between mb-4">
@@ -1467,7 +1488,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <h2 class="text-2xl font-bold text-gray-900">文件签署中心</h2>
-                            <p class="text-sm text-gray-500 mt-1">种植手术/补牙/拔牙/根管治疗知情同意书管理</p>
+                            <p class="text-sm text-gray-500 mt-1">种植手术/补牙/拔牙/根管治疗/固定义齿修复知情同意书管理</p>
                         </div>
                         <div class="relative" id="consent-new-dropdown">
                             <button onclick="toggleConsentNewMenu()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm flex items-center gap-1">
@@ -1478,7 +1499,8 @@
                                 <button onclick="showConsentForm('种植手术')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 rounded-t-lg">种植手术</button>
                                 <button onclick="showConsentForm('补牙')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">补牙</button>
                                 <button onclick="showConsentForm('拔牙')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">拔牙</button>
-                                <button onclick="showConsentForm('根管治疗')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 rounded-b-lg">根管治疗</button>
+                                <button onclick="showConsentForm('根管治疗')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">根管治疗</button>
+                                <button onclick="showConsentForm('固定义齿修复')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 rounded-b-lg">固定义齿修复</button>
                             </div>
                         </div>
                     </div>
@@ -1492,6 +1514,7 @@
                                 <option value="补牙">补牙</option>
                                 <option value="拔牙">拔牙</option>
                                 <option value="根管治疗">根管治疗</option>
+                                <option value="固定义齿修复">固定义齿修复</option>
                             </select>
                             <select id="consent-status" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-28">
                                 <option value="">全部状态</option>
@@ -1523,7 +1546,7 @@
                     </div>
                 </div>
 
-                <!-- 2. 新建/编辑表单（v8.6.6 通用引擎） -->
+                <!-- 2. 新建/编辑表单（v8.6.8 通用引擎） -->
                 <div id="consent-form-view" class="hidden">
                     <div class="flex items-center justify-between mb-4">
                         <button onclick="showConsentList()" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
@@ -1594,7 +1617,7 @@
                     <!-- 手写区域容器（动态渲染） -->
                     <div id="consent-handwrite-container"></div>
 
-                    <!-- v8.6.6: 种植体标签照片（仅种植手术） -->
+                    <!-- v8.6.8: 种植体标签照片（仅种植手术） -->
                     <div id="consent-barcode-section" class="bg-white rounded-xl shadow-sm border p-4 mb-4 hidden">
                         <h3 class="font-medium text-gray-900 mb-3">种植体标签照片</h3>
                         <div id="consent-barcode-upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors" onclick="document.getElementById('consent-barcode-input').click()">
@@ -1740,7 +1763,7 @@
                         <p class="indent-8">7、种植修复完成后，我将遵照医嘱，保证术后控制吸烟，注意饮食，避免咬过硬食物，坚持正确刷牙。保持口腔卫生，避免外伤，同时保证每半年到一年定期复查。</p>
                         <p class="indent-8 font-medium">以上牙种植治疗知情同意书，患者已知情同意并签字。</p>
                     </div>
-                    <!-- v8.6.6: 种植体标签照片预览 -->
+                    <!-- v8.6.8: 种植体标签照片预览 -->
                     <div id="preview-barcode-section" class="hidden mb-6">
                         <p class="text-sm font-medium text-gray-700 mb-2">种植体标签：</p>
                         <img id="preview-barcode-img" src="" alt="种植体标签" class="max-h-48 rounded-lg border">

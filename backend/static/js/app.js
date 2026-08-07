@@ -2877,6 +2877,24 @@ var _invRowCount = 0;
 var _currentEditSupplierId = null;
 var _invhCurrentPage = 1;
 
+// ==================== v8.6.8: 腾讯云OCR采购单文字识别 ====================
+
+function clearOcrResult() {
+    document.getElementById('ocr-result-text').value = '';
+}
+
+function copyOcrResult() {
+    var textEl = document.getElementById('ocr-result-text');
+    if (!textEl.value) return;
+    textEl.select();
+    document.execCommand('copy');
+    // 临时提示
+    var btn = event.target;
+    var origText = btn.textContent;
+    btn.textContent = '已复制';
+    setTimeout(function() { btn.textContent = origText; }, 1500);
+}
+
 function initInventoryEntryPage() {
     document.getElementById('inv-date').value = new Date().toISOString().split('T')[0];
     document.getElementById('inv-items-body').innerHTML = '';
@@ -2918,6 +2936,8 @@ function bindInventoryPhotoUpload() {
                     var parts = path.split('/');
                     var fname = parts[parts.length - 1];
                     document.getElementById('inv-preview-img').src = '/uploads/inventory/' + fname;
+                    // v8.6.8: 上传成功后自动调用OCR识别
+                    _callOcrForInventory(path);
                 } else { alert(res.message || '上传失败'); }
             }).catch(function(e) { alert('上传失败: ' + e.message); });
     };
@@ -2929,6 +2949,31 @@ function removeInventoryPhoto() {
     document.getElementById('inv-photo-preview-area').classList.add('hidden');
     document.getElementById('inv-preview-img').src = '';
     document.getElementById('inv-photo-input').value = '';
+    clearOcrResult();
+}
+
+// v8.6.8: 照片上传后自动调用OCR
+function _callOcrForInventory(photoPath) {
+    var statusEl = document.getElementById('ocr-status');
+    var textEl = document.getElementById('ocr-result-text');
+    if (statusEl) statusEl.classList.remove('hidden');
+    if (textEl) textEl.value = '';
+
+    api('/api/inventory/ocr-purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photo_path: photoPath })
+    }).then(function(res) {
+        if (statusEl) statusEl.classList.add('hidden');
+        if (res.code === 200 && textEl) {
+            textEl.value = res.data.text || '';
+        } else if (textEl) {
+            textEl.value = '识别失败：' + (res.message || '未知错误');
+        }
+    }).catch(function(e) {
+        if (statusEl) statusEl.classList.add('hidden');
+        if (textEl) textEl.value = '识别失败：' + e.message;
+    });
 }
 
 function bindInventoryPhotoSelection() {
@@ -3533,7 +3578,7 @@ function loadInventoryWarnings(level) {
 }
 
 
-// ==================== 文件签署中心 v8.6.6 ====================
+// ==================== 文件签署中心 v8.6.8 ====================
 
 var _consentCurrentPage = 1;
 var _selectedConsentId = null;
@@ -3543,7 +3588,7 @@ var _currentDocType = '';         // 当前同意书类型
 var _consentTemplateCache = {};   // 模板缓存
 var _currentFieldSchema = [];     // 当前类型的字段定义
 
-// ---- 种植体标签照片 v8.6.6 ----
+// ---- 种植体标签照片 v8.6.8 ----
 
 function _toggleBarcodeSection(docType) {
     var section = document.getElementById('consent-barcode-section');
@@ -3610,7 +3655,7 @@ function uploadBarcodeImage(input) {
 // ---- 列表 ----
 
 function _refreshConsentTemplates() {
-    // v8.6.6: 进入签署中心时自动刷新模板数据（解决条款内容不显示问题）
+    // v8.6.8: 进入签署中心时自动刷新模板数据（解决条款内容不显示问题）
     api('/api/consents/templates/refresh', { method: 'POST' }).then(function(res) {
         if (res.code === 200) {
             // 刷新成功后清空缓存，下次加载会重新从数据库读取
@@ -3672,7 +3717,7 @@ function showConsentForm(docType) {
         _renderConsentClauses(template.clauses || []);
         // 渲染手写区域
         _renderHandwriteAreas(_currentFieldSchema);
-        // v8.6.6: 控制种植体标签照片区域显示
+        // v8.6.8: 控制种植体标签照片区域显示
         _toggleBarcodeSection(docType);
         // 重置签名
         _resetSignPreview('patient');
@@ -3907,7 +3952,7 @@ function editConsent(id) {
             _loadSignPreview('patient', r.patient_signature_path, r.patient_sign_date);
             _loadSignPreview('guardian', r.guardian_signature_path, r.guardian_sign_date);
             _loadSignPreview('doctor', r.doctor_signature_path, r.doctor_sign_date);
-            // v8.6.6: 加载种植体标签照片
+            // v8.6.8: 加载种植体标签照片
             _toggleBarcodeSection(_currentDocType);
             _loadBarcodePreview(r.barcode_image_path);
             _checkCompleteBtn(r);
@@ -3940,7 +3985,7 @@ function completeConsent() {
 
 function generateConsentPDF() {
     if (!_selectedConsentId) { alert('请先保存同意书'); return; }
-    // v8.6.6: 如果PDF不存在，先自动归档生成PDF
+    // v8.6.8: 如果PDF不存在，先自动归档生成PDF
     api('/api/consents/' + _selectedConsentId).then(function(res) {
         if (res.code !== 200) { alert('加载失败'); return; }
         if (res.data && res.data.pdf_path) {
@@ -4088,7 +4133,7 @@ function previewConsent() {
         var toothNames = {11:'右上1',12:'右上2',13:'右上3',14:'右上4',15:'右上5',16:'右上6',17:'右上7',18:'右上8',21:'左上1',22:'左上2',23:'左上3',24:'左上4',25:'左上5',26:'左上6',27:'左上7',28:'左上8',31:'左下1',32:'左下2',33:'左下3',34:'左下4',35:'左下5',36:'左下6',37:'左下7',38:'左下8',41:'右下1',42:'右下2',43:'右下3',44:'右下4',45:'右下5',46:'右下6',47:'右下7',48:'右下8'};
 
         // 更新预览弹窗标题
-        var titleMap = {'种植手术':'种植手术知情同意书','补牙':'补牙知情同意书','拔牙':'拔牙知情同意书','根管治疗':'根管治疗知情同意书'};
+        var titleMap = {'种植手术':'种植手术知情同意书','补牙':'补牙知情同意书','拔牙':'拔牙知情同意书','根管治疗':'根管治疗知情同意书','固定义齿修复':'固定义齿修复知情同意书'};
         document.getElementById('preview-title').textContent = titleMap[r.doc_type] || '知情同意书';
 
         document.getElementById('preview-no').textContent = r.doc_no || '________';
@@ -4120,7 +4165,7 @@ function previewConsent() {
         document.getElementById('preview-guardian-relation').textContent = r.guardian_relation || '';
         _fillPreviewSign('doctor', r.doctor_signature_path, r.doctor_sign_date, r.doc_no);
 
-        // v8.6.6: 种植体标签照片预览
+        // v8.6.8: 种植体标签照片预览
         var barcodeSection = document.getElementById('preview-barcode-section');
         if (r.doc_type === '种植手术' && r.barcode_image_path) {
             barcodeSection.classList.remove('hidden');
@@ -4164,6 +4209,8 @@ function _buildPreviewExtra(docType, ef, tp, toothNames, docNo) {
         if (ef.pe_path) html += '<div><span class="text-gray-500">PE：</span><span class="text-emerald-600">已手写</span></div>';
         if (ef.patient_statement_path) html += '<div><span class="text-gray-500">患者陈述：</span><span class="text-emerald-600">已手写</span></div>';
         if (ef.doctor_statement_path) html += '<div><span class="text-gray-500">医生陈述：</span><span class="text-emerald-600">已手写</span></div>';
+    } else if (docType === '固定义齿修复') {
+        html += '<div><span class="text-gray-500">诊断：</span>' + (ef.diagnosis || '-') + ' | <span class="text-gray-500">主治医生：</span>' + (ef.doctor_name || '-') + '</div>';
     }
     html += '</div>';
     return html;
@@ -4198,6 +4245,7 @@ function _buildClauseReplacements(r, ef, tp, toothNames) {
         patient_decline_1: ef.patient_decline_1_path ? '(已签字)' : '(未签字)',
         patient_decline_2: ef.patient_decline_2_path ? '(已签字)' : '(未签字)',
         custom_note: ef.custom_note || '',
+        doctor_name: ef.doctor_name || '',
     };
 }
 
